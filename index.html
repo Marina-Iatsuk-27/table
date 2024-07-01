@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Table</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <style>
+        img {
+            height: 150px;
+        }
+
+        .bi-filter {
+            margin-left: 5px;
+            cursor: pointer;
+
+        }
+
+        .modal-body label {
+            display: block;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container mt-4">
+        <table class="table table-bordered" id="data-table">
+            <thead class="thead-dark">
+                <tr>
+                    <th>Фото</th>
+                    <th>Предмет <i class="bi bi-filter" data-column="subjectName"></i></th>
+                    <th>Номенклатура (введите) <i class="bi bi-filter" data-column="nmID"></i></th>
+                    <th>Размер (введите) <i class="bi bi-filter" data-column="allowed_sizes"></i></th>
+                    <th>Заказы 1м <i class="bi bi-filter" data-column="orders30"></i></th>
+                    <th>Заказы 14 д <i class="bi bi-filter" data-column="orders14"></i></th>
+                    <th>График продаж </th>
+                    <th>Остаток (шт) <i class="bi bi-filter"></i></th>
+                    <th>Остаток (дн) <i class="bi bi-filter"></i></th>
+                    <th>Пополнить (шт) <i class="bi bi-filter"></i></th>
+                    <th>Артикул <i class="bi bi-filter" data-column="vendorCode"></i></th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Строки  добавлены через renderTable -->
+            </tbody>
+        </table>
+    </div>
+
+    <div class="modal fade" id="filterModal" tabindex="-1" role="dialog" aria-labelledby="filterModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="filterModalLabel">Фильтрация</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <label>
+                        <input type="radio" name="sortOrder" value="asc"> Сортировка от А до Я
+                    </label>
+                    <label>
+                        <input type="radio" name="sortOrder" value="desc"> Сортировка от Я до А
+                    </label>
+                    <div id="filterValuesList"></div>
+                    <button id="resetFilter" class="btn btn-secondary mt-2" disabled>Сброс фильтра</button>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="applyFilter">Применить</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    // function fetchData() {
+    // $.ajax({
+    // url: 'https://manager.textile-retail-group.ru/api/get_stat_table',
+    // method: 'GET',
+    // dataType: 'json',
+    // success: function(response) {
+    // globalData = response.data;
+    // renderTable(globalData);
+    // },
+    // error: function() {
+    // console.error('Ошибка при получении данных');
+    // }
+    // });
+    // }
+
+    <script>
+        let currentColumn = '';
+        let originalData = [];
+
+        function fetchData() {
+            $.getJSON('data.json', function (response) {
+                originalData = response.data;
+                console.log('originalData в fetchData: ', originalData);
+                // sessionStorage.setItem('data', JSON.stringify(originalData));//добавим дату с хранилище
+                renderTable(originalData);
+            }).fail(function () {
+                console.error('Ошибка при загрузке данных');
+            });
+        }
+
+        function renderTable(data) {
+            const tbody = $('#data-table tbody');
+            tbody.empty();
+
+            data.forEach(item => {
+                const photo = item.photos ? `<img src="${item.photos[0].c246x328}" alt="Фото">` : '';
+                const subject = item.subjectName || '';
+                const nmID = item.nmID || '';
+                const vendorCode = item.vendorCode || '';
+
+                item.allowed_sizes.forEach(size => {
+                    const orders30 = item['30midle_sales'][size] || '';
+                    const orders14 = item['14midle_sales'][size] || '';
+
+                    tbody.append(`
+                            <tr>
+                                <td>${photo}</td>
+                                <td>${subject}</td>
+                                <td>${nmID}</td>
+                                <td>${size}</td>
+                                <td>${orders30}</td>
+                                <td>${orders14}</td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td>${vendorCode}</td>
+                            </tr>
+                        `);
+                });
+            });
+        }
+
+        function sortData(column, order) {
+            const table = $('#data-table tbody');
+            const rows = table.find('tr').get(); //получили все строки в массив
+            // console.log('rows: ',rows); 
+
+            rows.sort((a, b) => {
+                let aValue = $(a).find('td').eq(getColumnIndex(column)).text();
+                let bValue = $(b).find('td').eq(getColumnIndex(column))
+            .text(); //если сортировка по столбцу 'nmID', функция getColumnIndex('nmID') вернет 2. Затем sortData использует этот индекс, чтобы получить текстовое содержимое ячеек с индексом 2 из строк a и b.
+
+                const isNumber = !isNaN(parseFloat(aValue)) && !isNaN(parseFloat(bValue));
+                const isCyrillic = /^[а-яА-ЯёЁ]+$/.test(aValue) && /^[а-яА-ЯёЁ]+$/.test(bValue);
+
+                if (isNumber) {
+                    return order === 'asc' ? aValue - bValue : bValue -
+                    aValue; //asc - флаг для восходящей сорировки, если нажат он, то выполни ее, если не он, то нисходящую
+                } else if (isCyrillic) {
+                    return order === 'asc' ? aValue.localeCompare(bValue, 'ru') : bValue.localeCompare(aValue,
+                        'ru');
+                } else {
+                    return order === 'asc' ? aValue.localeCompare(bValue, 'en') : bValue.localeCompare(aValue,
+                        'en');
+                }
+            });
+            //перезаписываем строки внужном порядке
+            $.each(rows, (index, row) => {
+                table.append(row);
+            });
+        }
+        
+
+        function getColumnIndex(column) {
+            switch (column) {
+                case 'subjectName':
+                    return 1;
+                case 'nmID':
+                    return 2;
+                case 'allowed_sizes':
+                    return 3;
+                case 'orders30':
+                    return 4;
+                case 'orders14':
+                    return 5;
+                case 'vendorCode':
+                    return 10;
+                default:
+                    return -1;
+            }
+        }
+
+        function getUniqueColumnValues(column) {
+            const uniqueValues = [];
+            const columnIndex = getColumnIndex(column);
+
+            $('#data-table tbody tr').each(function () {
+                const value = $(this).find('td').eq(columnIndex).text().trim();
+                if (value !== '' && !uniqueValues.includes(value)) {
+                    uniqueValues.push(value);
+                }
+                $(`.bi-filter[data-column="${column}"]`).css('color', 'green');
+            });
+
+            return uniqueValues;
+        }
+        $(document).on('click', '.filter-item', function () {
+            const filterValue = $(this).text().trim();
+            $('#data-table tbody tr').each(function () {
+                const rowValue = $(this).find('td').eq(getColumnIndex(currentColumn)).text().trim();
+                if (rowValue === filterValue) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+            
+            $('#filterModal').modal('hide');
+        });
+
+        $(document).ready(function () {
+            const sessionData = sessionStorage.getItem('data');
+            // if (sessionData) {
+            //     originalData = JSON.parse(sessionData);
+            //     renderTable(originalData);
+            // } else {
+            //     fetchData();
+            // }
+            fetchData()
+            // $('.bi-filter').on('click', function () {
+            //     currentColumn = $(this).data('column');
+            //     $('#filterModal').modal('show');
+            // });
+            $('.bi-filter').on('click', function () {
+                currentColumn = $(this).data('column');
+                const uniqueValues = getUniqueColumnValues(currentColumn);
+
+                // Очищаем предыдущий список и добавляем новые элементы
+                $('#filterValuesList').empty();
+                uniqueValues.forEach(value => {
+                    $('#filterValuesList').append(
+                        `<button class="btn btn-outline-primary filter-item">${value}</button>`
+                        );
+                });
+
+                $('#filterModal').modal('show');
+            });
+
+
+
+            $('#applyFilter').on('click', function () {
+                const sortOrder = $('input[name="sortOrder"]:checked').val();
+                if (sortOrder) {
+                    sortData(currentColumn, sortOrder);
+                    $('#resetFilter').prop('disabled', false);
+                    $('#filterModal').modal('hide');
+                    // Устанавливаем зеленый цвет только для иконки в текущей колонке
+                    $(`.bi-filter[data-column="${currentColumn}"]`).css('color', 'green');
+                }
+            });
+
+            $('#resetFilter').on('click', function () {
+                console.log('originalData в resetFilter: ', originalData);
+                renderTable(originalData);
+
+                $(this).prop('disabled', true);
+                $('input[name="sortOrder"]').prop('checked', false);
+                $('#filterModal').modal('hide');
+                // возвращаем белый цвет только для иконки в текущей колонке
+                $(`.bi-filter[data-column="${currentColumn}"]`).css('color', 'white');
+            });
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+
+</html>
