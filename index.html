@@ -24,10 +24,29 @@
             display: block;
             margin-bottom: 10px;
         }
+
+        .input-group {
+            width: 50vw;
+        }
+        .inscription{
+            font-size: smaller;
+            color: rgba(44, 76, 65, 0.54);
+            font-style: italic;
+        }
     </style>
 </head>
 
 <body>
+    <div class="inputContainer">
+        <div class="input-group">
+            <input type="number" id="daysInput" class="form-control" placeholder="Введите количество дней"
+                aria-label="Введите количество дней от 15 до 45" aria-describedby="basic-addon2" min="15" max="45">
+            <div class="input-group-append">
+                <button class="btn btn-outline-secondary calculateReplenishment" type="button">Рассчитать пополнение
+                    (шт)</button>
+            </div>
+        </div>
+    </div>
     <div class="container mt-4">
         <table class="table table-bordered" id="data-table">
             <thead class="thead-dark">
@@ -81,20 +100,6 @@
 
 
 
-    // function fetchData() {
-    // $.ajax({
-    // url: 'https://manager.textile-retail-group.ru/api/get_stat_table',
-    // method: 'GET',
-    // dataType: 'json',
-    // success: function(response) {
-    // globalData = response.data;
-    // renderTable(globalData);
-    // },
-    // error: function() {
-    // console.error('Ошибка при получении данных');
-    // }
-    // });
-    // }
 
     <script>
         let currentColumn = '';
@@ -109,6 +114,19 @@
             }).fail(function () {
                 console.error('Ошибка при загрузке данных');
             });
+
+            // $.ajax({
+            // url: '/api/get_stat_table',
+            // method: 'GET',
+            // dataType: 'json',
+            // success: function(response) {
+            // originalData = response.data;
+            // renderTable(originalData);
+            // },
+            // error: function() {
+            // console.error('Ошибка при получении данных');
+            // }
+            // });
         }
 
         function renderTable(data) {
@@ -122,8 +140,13 @@
                 const vendorCode = item.vendorCode || '';
 
                 item.allowed_sizes.forEach(size => {
-                    const orders30 = item['30midle_sales'][size] || '';
-                    const orders14 = item['14midle_sales'][size] || '';
+                    const orders30 = parseFloat(item['30midle_sales'][size]) || 0;
+                    const orders14 = parseFloat(item['14midle_sales'][size]) || 0;
+                    const leftovers = parseFloat(item['stocks'][size]) || 0;
+                    // console.log('orders30: ', orders30, typeof (orders30));
+                    // console.log('leftovers: ', leftovers, typeof (leftovers));
+                    const leftoversDays = orders30 === 0 ? 0 : (leftovers / orders30).toFixed(2);
+
 
                     tbody.append(`
                             <tr>
@@ -134,15 +157,55 @@
                                 <td>${orders30}</td>
                                 <td>${orders14}</td>
                                 <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
+                                <td>${leftovers}</td>
+                                <td>${leftoversDays}</td>
+                                <td> <div class='inscription'>Введите кол-во дней в форму выше и рассчитайте </div></td>
                                 <td>${vendorCode}</td>
                             </tr>
                         `);
                 });
             });
         }
+
+        function renderTableReplenishment(data,valueReplenishment) {
+            const tbody = $('#data-table tbody');
+            tbody.empty();
+
+            data.forEach(item => {
+                const photo = item.photos ? `<img src="${item.photos[0].c246x328}" alt="Фото">` : '';
+                const subject = item.subjectName || '';
+                const nmID = item.nmID || '';
+                const vendorCode = item.vendorCode || '';
+
+                item.allowed_sizes.forEach(size => {
+                    const orders30 = parseFloat(item['30midle_sales'][size]) || 0;
+                    const orders14 = parseFloat(item['14midle_sales'][size]) || 0;
+                    const leftovers = parseFloat(item['stocks'][size]) || 0;
+                    // console.log('orders30: ', orders30, typeof (orders30));
+                    // console.log('leftovers: ', leftovers, typeof (leftovers));
+                    const leftoversDays = orders30 === 0 ? 0 : (leftovers / orders30).toFixed(2);
+                    const replenishment= orders30 === 0 ? 0 : ((orders30 * valueReplenishment)-leftovers).toFixed(2);
+
+
+                    tbody.append(`
+                            <tr>
+                                <td>${photo}</td>
+                                <td>${subject}</td>
+                                <td>${nmID}</td>
+                                <td>${size}</td>
+                                <td>${orders30}</td>
+                                <td>${orders14}</td>
+                                <td></td>
+                                <td>${leftovers}</td>
+                                <td>${leftoversDays}</td>
+                                <td>${replenishment}</td>
+                                <td>${vendorCode}</td>
+                            </tr>
+                        `);
+                });
+            });
+        }
+
 
         function sortData(column, order) {
             const table = $('#data-table tbody');
@@ -152,14 +215,14 @@
             rows.sort((a, b) => {
                 let aValue = $(a).find('td').eq(getColumnIndex(column)).text();
                 let bValue = $(b).find('td').eq(getColumnIndex(column))
-            .text(); //если сортировка по столбцу 'nmID', функция getColumnIndex('nmID') вернет 2. Затем sortData использует этот индекс, чтобы получить текстовое содержимое ячеек с индексом 2 из строк a и b.
+                    .text(); //если сортировка по столбцу 'nmID', функция getColumnIndex('nmID') вернет 2. Затем sortData использует этот индекс, чтобы получить текстовое содержимое ячеек с индексом 2 из строк a и b.
 
                 const isNumber = !isNaN(parseFloat(aValue)) && !isNaN(parseFloat(bValue));
                 const isCyrillic = /^[а-яА-ЯёЁ]+$/.test(aValue) && /^[а-яА-ЯёЁ]+$/.test(bValue);
 
                 if (isNumber) {
                     return order === 'asc' ? aValue - bValue : bValue -
-                    aValue; //asc - флаг для восходящей сорировки, если нажат он, то выполни ее, если не он, то нисходящую
+                        aValue; //asc - флаг для восходящей сорировки, если нажат он, то выполни ее, если не он, то нисходящую
                 } else if (isCyrillic) {
                     return order === 'asc' ? aValue.localeCompare(bValue, 'ru') : bValue.localeCompare(aValue,
                         'ru');
@@ -173,7 +236,7 @@
                 table.append(row);
             });
         }
-        
+
 
         function getColumnIndex(column) {
             switch (column) {
@@ -208,6 +271,8 @@
 
             return uniqueValues;
         }
+       
+       
         $(document).on('click', '.filter-item', function () {
             const filterValue = $(this).text().trim();
             $('#data-table tbody tr').each(function () {
@@ -218,7 +283,7 @@
                     $(this).hide();
                 }
             });
-            
+
             $('#filterModal').modal('hide');
         });
 
@@ -244,7 +309,7 @@
                 uniqueValues.forEach(value => {
                     $('#filterValuesList').append(
                         `<button class="btn btn-outline-primary filter-item">${value}</button>`
-                        );
+                    );
                 });
 
                 $('#filterModal').modal('show');
@@ -272,6 +337,22 @@
                 $('#filterModal').modal('hide');
                 // возвращаем белый цвет только для иконки в текущей колонке
                 $(`.bi-filter[data-column="${currentColumn}"]`).css('color', 'white');
+            });
+
+
+            $('.calculateReplenishment').on('click', function (value) {
+                // console.log('calculateReplenishment: ');
+                const valueReplenishment = parseInt($('#daysInput').val());
+
+                if (isNaN(valueReplenishment) || valueReplenishment < 15 || valueReplenishment > 45) {
+                    alert('Введите число в диапазоне от 15 до 45');
+                } else {
+                    // console.log('Количество дней:', valueReplenishment);
+                    renderTableReplenishment(originalData, valueReplenishment);
+                }
+
+                 
+
             });
         });
     </script>
