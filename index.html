@@ -195,9 +195,9 @@
                         <th>Заказы 1м <i class="bi bi-filter" data-column="orders30"></i></th>
                         <th>Заказы 14 д <i class="bi bi-filter" data-column="orders14"></i></th>
                         <th>График продаж </th>
-                        <th>Остаток (шт) <i class="bi bi-filter"></i></th>
-                        <th>Остаток (дн) <i class="bi bi-filter"></i></th>
-                        <th>Пополнить (шт) <i class="bi bi-filter"></i></th>
+                        <th>Остаток (шт) <i class="bi bi-filter" data-column="leftovers"></i></th>
+                        <th>Остаток (дн) <i class="bi bi-filter" data-column="leftoversDays"></i></th>
+                        <th>Пополнить (шт) <i class="bi bi-filter" data-column="replenishment"></i></th>
                         <th>Артикул <i class="bi bi-filter" data-column="vendorCode"></i></th>
                     </tr>
                 </thead>
@@ -580,12 +580,19 @@
                     return 4;
                 case 'orders14':
                     return 5;
+                    case 'leftovers':
+                    return 7;
+                    case 'leftoversDays':
+                    return 8;
+                    case 'replenishment':
+                    return 9;
                 case 'vendorCode':
                     return 10;
                 default:
                     return -1;
             }
         }
+ 
 
         function getUniqueColumnValues(column) {
             const uniqueValues = [];
@@ -596,7 +603,7 @@
                 if (value !== '' && !uniqueValues.includes(value)) {
                     uniqueValues.push(value);
                 }
-                $(`.bi-filter[data-column="${column}"]`).css('color', 'green');
+                // $(`.bi-filter[data-column="${column}"]`).css('color', 'green');
             });
 
             return uniqueValues;
@@ -698,8 +705,6 @@
             });
         }
 
-
-
         $(document).on('click', '.reloadData', function () {
             sessionStorage.clear();
             fetchData();
@@ -725,94 +730,126 @@
     }
 });
 
+$(document).ready(function () {
+    let filterStatus = {}; // объект для отслеживания состояния фильтрации колонок
+    let sortStatus = {}; // объект для отслеживания состояния сортировки колонок
+    let currentColumn = null; // текущая колонка для фильтрации или сортировки
+    let originalOrder = []; // массив для хранения исходного порядка строк
 
-        $(document).on('click', '.filter-item', function () {
-            const filterValue = $(this).text().trim();
-            $('#data-table tbody tr').each(function () {
-                const rowValue = $(this).find('td').eq(getColumnIndex(currentColumn)).text().trim();
-                if (rowValue === filterValue) {
-                    $(this).show();
-                } else {
-                    $(this).hide();
-                }
-            });
+    if (sessionData) {
+        originalData = JSON.parse(sessionData);
+        renderTable(originalData);
+        saveOriginalOrder();
+    } else {
+        fetchData();
+    }
 
-            $('#filterModal').modal('hide');
+    function saveOriginalOrder() {
+        originalOrder = $('#data-table tbody tr').get();
+    }
+
+    $('.bi-filter').on('click', function () {
+        currentColumn = $(this).data('column');
+        const uniqueValues = getUniqueColumnValues(currentColumn);
+        console.log('currentColumn: ', currentColumn);
+
+        // Очищаем предыдущий список и добавляем новые элементы
+        $('#filterValuesList').empty();
+        uniqueValues.forEach(value => {
+            $('#filterValuesList').append(
+                `<div class="filter-item">${value}</div>`
+            );
         });
 
-        $(document).ready(function () {
+        $('#filterModal').modal('show');
+    });
 
-            if (sessionData) {
-                originalData = JSON.parse(sessionData);
-                renderTable(originalData);
-            } else {
-                fetchData();
+    $('#applyFilter').on('click', function () {
+        const sortOrder = $('input[name="sortOrder"]:checked').val();
+        if (sortOrder) {
+            // Сбрасываем состояние сортировки для всех колонок перед применением новой сортировки
+            for (let column in sortStatus) {
+                delete sortStatus[column];
             }
-            // fetchData()
-            // $('.bi-filter').on('click', function () {
-            //     currentColumn = $(this).data('column');
-            //     $('#filterModal').modal('show');
-            // });
 
+            sortData(currentColumn, sortOrder);
+            $('#resetFilter').prop('disabled', false);
+            $('#filterModal').modal('hide');
 
+            // Устанавливаем зеленый цвет только для иконки в текущей колонке для сортировки
+            sortStatus[currentColumn] = true;
+            updateFilterIcons();
+        }
+    });
 
-
-            $('.bi-filter').on('click', function () {
-                currentColumn = $(this).data('column');
-                const uniqueValues = getUniqueColumnValues(currentColumn);
-
-                // Очищаем предыдущий список и добавляем новые элементы
-                $('#filterValuesList').empty();
-                uniqueValues.forEach(value => {
-                    $('#filterValuesList').append(
-                        `<div class="filter-item">${value}</div>`
-                    );
-                });
-
-                $('#filterModal').modal('show');
+    $('#resetFilter').on('click', function () {
+        if (filterStatus[currentColumn]) {
+            // Показать все строки, скрытые при фильтрации
+            $('#data-table tbody tr').show();
+        } else if (sortStatus[currentColumn]) {
+            // Восстановить исходный порядок строк
+            $.each(originalOrder, (index, row) => {
+                $('#data-table tbody').append(row);
             });
+        }
 
+        $('input[name="sortOrder"]').prop('checked', false);
+        $('#filterModal').modal('hide');
 
+        // Удаляем состояние фильтрации и сортировки для текущей колонки
+        delete filterStatus[currentColumn];
+        delete sortStatus[currentColumn];
+        updateFilterIcons();
+    });
 
-            $('#applyFilter').on('click', function () {
-                const sortOrder = $('input[name="sortOrder"]:checked').val();
-                if (sortOrder) {
-                    sortData(currentColumn, sortOrder);
-                    $('#resetFilter').prop('disabled', false);
-                    $('#filterModal').modal('hide');
-                    // Устанавливаем зеленый цвет только для иконки в текущей колонке
-                    $(`.bi-filter[data-column="${currentColumn}"]`).css('color', 'green');
-                }
-            });
-
-            $('#resetFilter').on('click', function () {
-                console.log('originalData в resetFilter: ', originalData);
-                renderTable(originalData);
-
-                $(this).prop('disabled', true);
-                $('input[name="sortOrder"]').prop('checked', false);
-                $('#filterModal').modal('hide');
-                // возвращаем белый цвет только для иконки в текущей колонке
-                $(`.bi-filter[data-column="${currentColumn}"]`).css('color', 'white');
-            });
-
-
-            $('.calculateReplenishment').on('click', function (value) {
-                // console.log('calculateReplenishment: ');
-                const valueReplenishment = parseInt($('#daysInput').val());
-
-                if (isNaN(valueReplenishment) || valueReplenishment < 15 || valueReplenishment > 45) {
-                    alert('Введите число в диапазоне от 15 до 45');
-                } else {
-                    // console.log('Количество дней:', valueReplenishment);
-                    renderTableReplenishment(originalData, valueReplenishment);
-                    $('#daysInput').val('');
-                }
-
-
-
-            });
+    $(document).on('click', '.filter-item', function () {
+        const filterValue = $(this).text().trim();
+        $('#data-table tbody tr').each(function () {
+            const rowValue = $(this).find('td').eq(getColumnIndex(currentColumn)).text().trim();
+            if (rowValue === filterValue) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
         });
+
+        $('#filterModal').modal('hide');
+
+        // Сбрасываем состояние сортировки для всех колонок при применении фильтра
+        for (let column in sortStatus) {
+            delete sortStatus[column];
+        }
+        // Устанавливаем зеленый цвет только для иконки в текущей колонке для фильтрации
+        filterStatus[currentColumn] = true;
+        updateFilterIcons();
+    });
+
+    $('.calculateReplenishment').on('click', function (value) {
+        const valueReplenishment = parseInt($('#daysInput').val());
+
+        if (isNaN(valueReplenishment) || valueReplenishment < 15 || valueReplenishment > 45) {
+            alert('Введите число в диапазоне от 15 до 45');
+        } else {
+            renderTableReplenishment(originalData, valueReplenishment);
+            $('#daysInput').val('');
+        }
+    });
+
+    function updateFilterIcons() {
+        $('.bi-filter').each(function () {
+            const column = $(this).data('column');
+            if (filterStatus[column]) {
+                $(this).css('color', 'green');
+            } else if (sortStatus[column]) {
+                $(this).css('color', 'green');
+            } else {
+                $(this).css('color', 'white');
+            }
+        });
+    }
+    
+});
+
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
