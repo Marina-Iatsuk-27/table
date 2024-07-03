@@ -238,25 +238,26 @@
 
     <script>
         let currentColumn = '';
-        // let originalData = [];
         const sessionData = sessionStorage.getItem('data');
 
         function fetchData() {
+            
             $('#loading').show();
             $('tbody').hide();
 
+// !!!! ПРИ ПОЛУЧЕНИИ ДАННЫХ ИЗ АПИ УБРАТЬ СТРОЧКИ НИЖЕ И РАССКОМЕНТИРОВАТЬ ПОЛУЧЕНИЕ ДАННЫХ ЧЕРЕЗ ajax!!!
             $.getJSON('data.json', function (response) {
                 originalData = response.data;
-                // console.log('originalData в fetchData: ', originalData);
                 sessionStorage.setItem('data', JSON.stringify(originalData)); //добавим дату с хранилище
                 $('tbody').show();
                 renderTable(originalData)
-
                 $('#loading').hide();
             }).fail(function () {
                 console.error('Ошибка при загрузке данных');
                 $('#loading').hide();
             });
+
+            //!!!здесь конец строчек получения данных из файла, нужно расскоментировать код ниже:
 
             // $.ajax({
             // url: '/api/get_stat_table',
@@ -264,71 +265,21 @@
             // dataType: 'json',
             // success: function(response) {
             // originalData = response.data;
+            // sessionStorage.setItem('data', JSON.stringify(originalData));
+            // $('tbody').show();
             // renderTable(originalData);
+            // $('#loading').hide();
             // },
             // error: function() {
             // console.error('Ошибка при получении данных');
+            // $('#loading').hide();
             // }
             // });
+
+            // !!! Конец получения даты из апи
         }
 
-        // функция отрисовки таблицы с одним графиком на товар:
-        //         function renderTable(data) {
-        //     const tbody = $('#data-table tbody');
-        //     tbody.empty();
-
-        //     data.forEach(item => {
-        //         const photo = item.photos ? `<img src="${item.photos[0].c246x328}" alt="Фото">` : '';
-        //         const subject = item.subjectName || '';
-        //         const nmID = item.nmID || '';
-        //         const vendorCode = item.vendorCode || '';
-        //         const graph = item.graph || '';
-        //         const rowCount = item.allowed_sizes.length;
-
-        //         console.log('graph: ', graph);
-        //         console.log('nmID: ', nmID);
-
-        //         let firstRow = true;
-
-        //         item.allowed_sizes.forEach(size => {
-        //             const orders30 = parseFloat(item['30midle_sales'][size]) || 0;
-        //             const orders14 = parseFloat(item['14midle_sales'][size]) || 0;
-        //             const leftovers = parseFloat(item['stocks'][size]) || 0;
-        //             const leftoversDays = orders30 === 0 ? 0 : (leftovers / orders30).toFixed(2);
-
-        //             const graphCell = firstRow ? `
-        //                 <td rowspan="${rowCount}">
-        //                     <div class="chart-container">
-        //                         <canvas id="${nmID}" style="display: block; box-sizing: border-box;"></canvas>
-        //                     </div>
-        //                 </td>
-        //             ` : '';
-
-        //             tbody.append(`
-        //                 <tr>
-        //                     <td>${photo}</td>
-        //                     <td>${subject}</td>
-        //                     <td>${nmID}</td>
-        //                     <td>${size}</td>
-        //                     <td>${orders30}</td>
-        //                     <td>${orders14}</td>
-        //                     ${graphCell}
-        //                     <td>${leftovers}</td>
-        //                     <td>${leftoversDays}</td>
-        //                     <td> <div class='inscription'>Введите кол-во дней в форму выше и рассчитайте </div></td>
-        //                     <td>${vendorCode}</td>
-        //                 </tr>
-        //             `);
-
-        //             if (firstRow) {
-        //                 initializeChart(nmID, graph);
-        //                 firstRow = false;
-        //             }
-        //         });
-        //     });
-        // }
-
-
+        
         function renderTable(data) {
             const tbody = $('#data-table tbody');
             tbody.empty();
@@ -424,11 +375,8 @@
                 const averageOrders30 = Number((totalOrders30).toFixed(2))
                 const averageOrders14 = Number(parseFloat(totalOrders14).toFixed(2))
                 const averageLeftovers = Number(parseFloat(totalLeftovers).toFixed(2))
-                console.log('averageLeftovers: ', averageLeftovers);
-
-                console.log(typeof (averageOrders30), typeof (averageOrders14), typeof (averageLeftovers));
-
-
+                // console.log('averageLeftovers: ', averageLeftovers);
+                // console.log(typeof (averageOrders30), typeof (averageOrders14), typeof (averageLeftovers));
 
                 const leftoversDays = averageOrders30 === 0 ? 0 : (averageLeftovers / averageOrders30).toFixed(
                     2);
@@ -515,6 +463,64 @@
             });
         }
 
+
+// функция отрисовки таблицы с одним графиком на товар:
+        //         function renderTable(data) {
+        //     const tbody = $('#data-table tbody');
+        //     tbody.empty();
+
+        //     data.forEach(item => {
+        //         const photo = item.photos ? `<img src="${item.photos[0].c246x328}" alt="Фото">` : '';
+        //         const subject = item.subjectName || '';
+        //         const nmID = item.nmID || '';
+        //         const vendorCode = item.vendorCode || '';
+        //         const graph = item.graph || '';
+        //         const rowCount = item.allowed_sizes.length;
+
+        //         console.log('graph: ', graph);
+        //         console.log('nmID: ', nmID);
+
+        //         let firstRow = true;
+
+        //         item.allowed_sizes.forEach(size => {
+        //             const orders30 = parseFloat(item['30midle_sales'][size]) || 0;
+        //             const orders14 = parseFloat(item['14midle_sales'][size]) || 0;
+        //             const leftovers = parseFloat(item['stocks'][size]) || 0;
+        //             const leftoversDays = orders30 === 0 ? 0 : (leftovers / orders30).toFixed(2);
+
+        //             const graphCell = firstRow ? `
+        //                 <td rowspan="${rowCount}">
+        //                     <div class="chart-container">
+        //                         <canvas id="${nmID}" style="display: block; box-sizing: border-box;"></canvas>
+        //                     </div>
+        //                 </td>
+        //             ` : '';
+
+        //             tbody.append(`
+        //                 <tr>
+        //                     <td>${photo}</td>
+        //                     <td>${subject}</td>
+        //                     <td>${nmID}</td>
+        //                     <td>${size}</td>
+        //                     <td>${orders30}</td>
+        //                     <td>${orders14}</td>
+        //                     ${graphCell}
+        //                     <td>${leftovers}</td>
+        //                     <td>${leftoversDays}</td>
+        //                     <td> <div class='inscription'>Введите кол-во дней в форму выше и рассчитайте </div></td>
+        //                     <td>${vendorCode}</td>
+        //                 </tr>
+        //             `);
+
+        //             if (firstRow) {
+        //                 initializeChart(nmID, graph);
+        //                 firstRow = false;
+        //             }
+        //         });
+        //     });
+        // }
+
+
         function getColorClass(value) {
             if (value >= 0 && value <= 1.99) {
                 return 'red-cell';
@@ -528,7 +534,6 @@
                 return '';
             }
         }
-
 
         function sortData(column, order) {
             const table = $('#data-table tbody');
@@ -560,7 +565,6 @@
             });
         }
 
-
         function getColumnIndex(column) {
             switch (column) {
                 case 'subjectName':
@@ -585,7 +589,6 @@
                     return -1;
             }
         }
- 
 
         function getUniqueColumnValues(column) {
             const uniqueValues = [];
@@ -596,7 +599,6 @@
                 if (value !== '' && !uniqueValues.includes(value)) {
                     uniqueValues.push(value);
                 }
-                // $(`.bi-filter[data-column="${column}"]`).css('color', 'green');
             });
 
             return uniqueValues;
@@ -608,7 +610,7 @@
             const currentDate = new Date();
             const currentDayIndex = currentDate.getDay(); // нашли индекс текущего дня
 
-            console.log('canvasId: ', canvasId, 'graphData: ', graphData);
+            // console.log('canvasId: ', canvasId, 'graphData: ', graphData);
 
             // меняем массив дней недели так, чтобы справа был текущий день недели
             const labels = [...daysOfWeek.slice(currentDayIndex + 1), ...daysOfWeek.slice(0, currentDayIndex + 1)];
@@ -718,22 +720,13 @@
 
 
         $(document).on('click', '.deleteModify', function () {
-    if ($(this).text() === "Показать товар без модификаций") {
-        
-        $(this).text("Показать модификации");
-
-        // Выполняем функцию renderTableWithoutSizes
-        
+    if ($(this).text() === "Показать товар без модификаций") {   
+        $(this).text("Показать модификации");   
         renderTableWithoutSizes(JSON.parse(sessionData));
        
     } else if ($(this).text() === "Показать модификации") {
-        // Изменяем текст кнопки на "Показать товар без модификации"
-        $(this).text("Показать товар без модификации");
-
-        // Выполняем функцию renderTable
-       
-        renderTable(JSON.parse(sessionData));
-        
+        $(this).text("Показать товар без модификации");      
+        renderTable(JSON.parse(sessionData));  
     }
 });
 
@@ -758,7 +751,7 @@ $(document).ready(function () {
     $('.bi-filter').on('click', function () {
         currentColumn = $(this).data('column');
         const uniqueValues = getUniqueColumnValues(currentColumn);
-        console.log('currentColumn: ', currentColumn);
+        // console.log('currentColumn: ', currentColumn);
 
         // Очищаем предыдущий список и добавляем новые элементы
         $('#filterValuesList').empty();
