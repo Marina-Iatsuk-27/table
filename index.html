@@ -16,7 +16,7 @@
             flex-direction: column;
             align-items: flex-start;
             height: 90vh;
-            width: 80vw;
+            width: 90vw;
         }
 
         img {
@@ -39,41 +39,31 @@
         }
 
         #filterValuesList {
-            max-height: 200px;
-            /* Максимальная высота списка */
+            max-height: 100px;
             overflow-y: auto;
-            /* Вертикальная прокрутка */
             border: 1px solid #ddd;
-            /* Граница для наглядности */
             padding: 10px;
-            /* Внутренний отступ */
         }
 
         .filter-item {
             margin-bottom: 5px;
-            /* Отступ между элементами */
             cursor: pointer;
-
         }
 
         .red-cell {
             background-color: #ffcccc;
-            /* Красный */
         }
 
         .yellow-cell {
             background-color: #ecec58;
-            /* Желтый */
         }
 
         .light-yellow-cell {
             background-color: #ffffe0;
-            /* Светло-желтый */
         }
 
         .green-cell {
             background-color: #ccffcc;
-            /* Зеленый, но не яркий */
         }
 
         .headerContainer {
@@ -124,34 +114,25 @@
             border: 1px solid #ccc;
         }
 
-        thead th {
+        thead {
             position: sticky;
             top: 0;
             background: #f9f9f9;
             z-index: 10;
         }
-
-        /* tbody th,
-        tbody td:first-child {
-            position: sticky;
-            left: 0;
-            background: #f9f9f9;
-            z-index: 5;
-        } */
         .fixed-column {
             position: sticky;
             left: 0;
             background-color: #fff;
-            /* Цвет фона для первых двух столбцов */
+          
             /* z-index: 2; */
         }
 
         .fixed-column-2 {
             position: sticky;
             left: 100px;
-            /* Измените это значение в зависимости от ширины первого столбца */
             background-color: #fff;
-            /* Цвет фона для первых двух столбцов */
+           
             /* z-index: 2; */
         }
 
@@ -164,6 +145,18 @@
             background: #f9f9f9;
             z-index: 5;
         } */
+
+        @media (max-width: 1700px) {
+        body {
+            font-size: 0.8rem !important;
+        }
+
+        .headerContainer {
+            padding: 20px;
+        }
+
+        
+    }
     </style>
 </head>
 
@@ -180,7 +173,7 @@
                         (шт)</button>
                 </div>
             </div>
-            <button class="btn btn-outline-secondary deleteModify" type="button">Показать товар без модификации</button>
+            <button class="btn btn-outline-secondary deleteModify" type="button">Показать товар без модификаций</button>
             <button class="btn btn-outline-secondary reloadData" type="button">Обновить данные</button>
         </div>
 
@@ -704,15 +697,29 @@
                 }
             });
         }
+       
+        $(document).on('click', '.calculateReplenishment',function (value) {
+        const valueReplenishment = parseInt($('#daysInput').val());
 
-        $(document).on('click', '.reloadData', function () {
+        if (isNaN(valueReplenishment) || valueReplenishment < 15 || valueReplenishment > 45) {
+            alert('Введите число в диапазоне от 15 до 45');
+        } else {
+            renderTableReplenishment(originalData, valueReplenishment);
+            $('#daysInput').val('');
+            $('.deleteModify').text("Показать товар без модификаций");
+        }
+    });
+        
+    $(document).on('click', '.reloadData', function () {
             sessionStorage.clear();
+            $('.deleteModify').text("Показать товар без модификаций");
             fetchData();
         });
 
+
         $(document).on('click', '.deleteModify', function () {
-    if ($(this).text() === "Показать товар без модификации") {
-        // Изменяем текст кнопки на "Показать модификации"
+    if ($(this).text() === "Показать товар без модификаций") {
+        
         $(this).text("Показать модификации");
 
         // Выполняем функцию renderTableWithoutSizes
@@ -824,16 +831,7 @@ $(document).ready(function () {
         updateFilterIcons();
     });
 
-    $('.calculateReplenishment').on('click', function (value) {
-        const valueReplenishment = parseInt($('#daysInput').val());
-
-        if (isNaN(valueReplenishment) || valueReplenishment < 15 || valueReplenishment > 45) {
-            alert('Введите число в диапазоне от 15 до 45');
-        } else {
-            renderTableReplenishment(originalData, valueReplenishment);
-            $('#daysInput').val('');
-        }
-    });
+    
 
     function updateFilterIcons() {
         $('.bi-filter').each(function () {
