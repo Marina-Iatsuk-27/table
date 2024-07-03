@@ -11,6 +11,13 @@
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <style>
+        .table-wrapper{
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            height: 90vh;
+            width: 80vw;
+        }
         img {
             height: 150px;
         }
@@ -25,9 +32,29 @@
             display: block;
             margin-bottom: 10px;
         }
+        .red-cell {
+    background-color: #ffcccc; /* Красный */
+}
 
+.yellow-cell {
+    background-color: #ecec58; /* Желтый */
+}
+
+.light-yellow-cell {
+    background-color: #ffffe0; /* Светло-желтый */
+}
+
+.green-cell {
+    background-color: #ccffcc; /* Зеленый, но не яркий */
+}
+
+.inputContainer{
+    width: 100%;
+    max-height: 40px;
+    padding: 30px;
+}
         .input-group {
-            width: 50vw;
+            width: 50%;
         }
 
         .inscription {
@@ -35,70 +62,127 @@
             color: rgba(44, 76, 65, 0.54);
             font-style: italic;
         }
+        .table-inner {
+            position: relative;
+            overflow: auto;
+            max-height: 80%; 
+            max-width: 100%;
+            padding: 0;
+            margin-left: 30px;
+            margin-right: 30px;
+            margin-bottom: 30px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            padding: 8px 16px;
+            border: 1px solid #ccc;
+        }
+        thead th {
+            position: sticky;
+            top: 0;
+            background: #f9f9f9;
+            z-index: 10;
+        }
+        /* tbody th,
+        tbody td:first-child {
+            position: sticky;
+            left: 0;
+            background: #f9f9f9;
+            z-index: 5;
+        } */
+        .fixed-column {
+    position: sticky;
+    left: 0;
+    background-color: #fff; /* Цвет фона для первых двух столбцов */
+    /* z-index: 2; */
+}
+
+.fixed-column-2 {
+    position: sticky;
+    left: 100px; /* Измените это значение в зависимости от ширины первого столбца */
+    background-color: #fff; /* Цвет фона для первых двух столбцов */
+    /* z-index: 2; */
+}
+        /* tbody td:first-child {
+            z-index: 5;
+        }
+        tbody td:nth-child(2) {
+            position: sticky;
+            left: 75px;
+            background: #f9f9f9;
+            z-index: 5;
+        } */
     </style>
 </head>
 
 <body>
-    <div class="inputContainer">
-        <div class="input-group">
-            <input type="number" id="daysInput" class="form-control" placeholder="Введите количество дней"
-                aria-label="Введите количество дней от 15 до 45" aria-describedby="basic-addon2" min="15" max="45">
-            <div class="input-group-append">
-                <button class="btn btn-outline-secondary calculateReplenishment" type="button">Рассчитать пополнение
-                    (шт)</button>
-            </div>
-        </div>
-    </div>
-    <div class="container mt-4">
-        <table class="table table-bordered" id="data-table">
-            <thead class="thead-dark">
-                <tr>
-                    <th>Фото</th>
-                    <th>Предмет <i class="bi bi-filter" data-column="subjectName"></i></th>
-                    <th>Номенклатура (введите) <i class="bi bi-filter" data-column="nmID"></i></th>
-                    <th>Размер (введите) <i class="bi bi-filter" data-column="allowed_sizes"></i></th>
-                    <th>Заказы 1м <i class="bi bi-filter" data-column="orders30"></i></th>
-                    <th>Заказы 14 д <i class="bi bi-filter" data-column="orders14"></i></th>
-                    <th>График продаж </th>
-                    <th>Остаток (шт) <i class="bi bi-filter"></i></th>
-                    <th>Остаток (дн) <i class="bi bi-filter"></i></th>
-                    <th>Пополнить (шт) <i class="bi bi-filter"></i></th>
-                    <th>Артикул <i class="bi bi-filter" data-column="vendorCode"></i></th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Строки  добавлены через renderTable -->
-            </tbody>
-        </table>
-    </div>
-
-    <div class="modal fade" id="filterModal" tabindex="-1" role="dialog" aria-labelledby="filterModalLabel"
-        aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="filterModalLabel">Фильтрация</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <label>
-                        <input type="radio" name="sortOrder" value="asc"> Сортировка от А до Я
-                    </label>
-                    <label>
-                        <input type="radio" name="sortOrder" value="desc"> Сортировка от Я до А
-                    </label>
-                    <div id="filterValuesList"></div>
-                    <button id="resetFilter" class="btn btn-secondary mt-2" disabled>Сброс фильтра</button>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" id="applyFilter">Применить</button>
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
+    <div class="table-wrapper">
+        <div class="inputContainer">
+            <div class="input-group">
+                <input type="number" id="daysInput" class="form-control" placeholder="Введите количество дней"
+                    aria-label="Введите количество дней от 15 до 45" aria-describedby="basic-addon2" min="15" max="45">
+                <div class="input-group-append">
+                    <button class="btn btn-outline-secondary calculateReplenishment" type="button">Рассчитать пополнение
+                        (шт)</button>
                 </div>
             </div>
         </div>
+        <div class="table-inner container mt-4">
+            <table class="table table-bordered" id="data-table">
+                <thead class="thead-dark">
+                    <tr>
+                        <th class="fixed-column">Фото</th>
+                        <th class="fixed-column-2">Предмет <i class="bi bi-filter" data-column="subjectName"></i></th>
+                        <th>Номенклатура (введите) <i class="bi bi-filter" data-column="nmID"></i></th>
+                        <th>Размер (введите) <i class="bi bi-filter" data-column="allowed_sizes"></i></th>
+                        <th>Заказы 1м <i class="bi bi-filter" data-column="orders30"></i></th>
+                        <th>Заказы 14 д <i class="bi bi-filter" data-column="orders14"></i></th>
+                        <th>График продаж </th>
+                        <th>Остаток (шт) <i class="bi bi-filter"></i></th>
+                        <th>Остаток (дн) <i class="bi bi-filter"></i></th>
+                        <th>Пополнить (шт) <i class="bi bi-filter"></i></th>
+                        <th>Артикул <i class="bi bi-filter" data-column="vendorCode"></i></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Строки  добавлены через renderTable -->
+                </tbody>
+            </table>
+        </div>
+        
+    
+        <div class="modal fade" id="filterModal" tabindex="-1" role="dialog" aria-labelledby="filterModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="filterModalLabel">Фильтрация</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <label>
+                            <input type="radio" name="sortOrder" value="asc"> Сортировка от А до Я
+                        </label>
+                        <label>
+                            <input type="radio" name="sortOrder" value="desc"> Сортировка от Я до А
+                        </label>
+                        <div id="filterValuesList"></div>
+                        <button id="resetFilter" class="btn btn-secondary mt-2" disabled>Сброс фильтра</button>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" id="applyFilter">Применить</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
+    
 
 
 
@@ -187,7 +271,7 @@
 // }
 
 
-        function renderTable(data) {
+function renderTable(data) {
     const tbody = $('#data-table tbody');
     tbody.empty();
 
@@ -212,17 +296,20 @@
                 </td>
             `;
 
+            const leftoversCellClass = getColorClass(leftovers);
+            const leftoversDaysCellClass = getColorClass(leftoversDays);
+
             tbody.append(`
                 <tr>
-                    <td>${photo}</td>
-                    <td>${subject}</td>
+                    <td class="fixed-column">${photo}</td>
+                    <td class="fixed-column-2">${subject}</td>
                     <td>${nmID}</td>
                     <td>${size}</td>
                     <td>${orders30}</td>
                     <td>${orders14}</td>
                     ${graphCell}
-                    <td>${leftovers}</td>
-                    <td>${leftoversDays}</td>
+                    <td class="${leftoversCellClass}">${leftovers}</td>
+                    <td class="${leftoversDaysCellClass}">${leftoversDays}</td>
                     <td> <div class='inscription'>Введите кол-во дней в форму выше и рассчитайте </div></td>
                     <td>${vendorCode}</td>
                 </tr>
@@ -232,6 +319,8 @@
         });
     });
 }
+
+
 
 function renderTableReplenishment(data, valueReplenishment) {
     const tbody = $('#data-table tbody');
@@ -259,7 +348,8 @@ function renderTableReplenishment(data, valueReplenishment) {
                     </div>
                 </td>
             `;
-
+            const leftoversCellClass = getColorClass(leftovers);
+            const leftoversDaysCellClass = getColorClass(leftoversDays);
             tbody.append(`
                 <tr>
                     <td>${photo}</td>
@@ -269,8 +359,8 @@ function renderTableReplenishment(data, valueReplenishment) {
                     <td>${orders30}</td>
                     <td>${orders14}</td>
                     ${graphCell}
-                    <td>${leftovers}</td>
-                    <td>${leftoversDays}</td>
+                    <td class="${leftoversCellClass}">${leftovers}</td>
+                    <td class="${leftoversDaysCellClass}">${leftoversDays}</td>
                     <td> ${replenishment}</td>
                     <td>${vendorCode}</td>
                 </tr>
@@ -281,7 +371,19 @@ function renderTableReplenishment(data, valueReplenishment) {
     });
 }
 
-
+function getColorClass(value) {
+    if (value >= 0 && value <=  1.99) {
+        return 'red-cell';
+    } else if (value >= 2 && value <= 5.99) {
+        return 'yellow-cell';
+    } else if (value >= 6 && value <= 10.99) {
+        return 'light-yellow-cell';
+    } else if (value >= 11) {
+        return 'green-cell';
+    } else {
+        return '';
+    }
+}
 
         
         function sortData(column, order) {
@@ -473,6 +575,10 @@ function renderTableReplenishment(data, valueReplenishment) {
             //     currentColumn = $(this).data('column');
             //     $('#filterModal').modal('show');
             // });
+            
+
+
+
             $('.bi-filter').on('click', function () {
                 currentColumn = $(this).data('column');
                 const uniqueValues = getUniqueColumnValues(currentColumn);
