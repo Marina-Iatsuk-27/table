@@ -11,13 +11,14 @@
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <style>
-        .table-wrapper{
+        .table-wrapper {
             display: flex;
             flex-direction: column;
             align-items: flex-start;
             height: 90vh;
             width: 80vw;
         }
+
         img {
             height: 150px;
         }
@@ -32,29 +33,67 @@
             display: block;
             margin-bottom: 10px;
         }
+
+        .modal-content {
+            height: 600px;
+        }
+
+        #filterValuesList {
+            max-height: 200px;
+            /* Максимальная высота списка */
+            overflow-y: auto;
+            /* Вертикальная прокрутка */
+            border: 1px solid #ddd;
+            /* Граница для наглядности */
+            padding: 10px;
+            /* Внутренний отступ */
+        }
+
+        .filter-item {
+            margin-bottom: 5px;
+            /* Отступ между элементами */
+            cursor: pointer;
+
+        }
+
         .red-cell {
-    background-color: #ffcccc; /* Красный */
-}
+            background-color: #ffcccc;
+            /* Красный */
+        }
 
-.yellow-cell {
-    background-color: #ecec58; /* Желтый */
-}
+        .yellow-cell {
+            background-color: #ecec58;
+            /* Желтый */
+        }
 
-.light-yellow-cell {
-    background-color: #ffffe0; /* Светло-желтый */
-}
+        .light-yellow-cell {
+            background-color: #ffffe0;
+            /* Светло-желтый */
+        }
 
-.green-cell {
-    background-color: #ccffcc; /* Зеленый, но не яркий */
-}
+        .green-cell {
+            background-color: #ccffcc;
+            /* Зеленый, но не яркий */
+        }
 
-.inputContainer{
-    width: 100%;
-    max-height: 40px;
-    padding: 30px;
-}
+        .headerContainer {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            /* max-height: 40px; */
+            padding: 30px;
+        }
+
         .input-group {
             width: 50%;
+        }
+
+        .reloadData {
+            height: calc(1.5em + .75rem + 2px);
+        }
+
+        .deleteModify {
+            height: calc(1.5em + .75rem + 2px);
         }
 
         .inscription {
@@ -62,30 +101,36 @@
             color: rgba(44, 76, 65, 0.54);
             font-style: italic;
         }
+
         .table-inner {
             position: relative;
             overflow: auto;
-            max-height: 80%; 
+            max-height: 80%;
             max-width: 100%;
             padding: 0;
             margin-left: 30px;
             margin-right: 30px;
             margin-bottom: 30px;
         }
+
         table {
             border-collapse: collapse;
             width: 100%;
         }
-        th, td {
+
+        th,
+        td {
             padding: 8px 16px;
             border: 1px solid #ccc;
         }
+
         thead th {
             position: sticky;
             top: 0;
             background: #f9f9f9;
             z-index: 10;
         }
+
         /* tbody th,
         tbody td:first-child {
             position: sticky;
@@ -94,18 +139,22 @@
             z-index: 5;
         } */
         .fixed-column {
-    position: sticky;
-    left: 0;
-    background-color: #fff; /* Цвет фона для первых двух столбцов */
-    /* z-index: 2; */
-}
+            position: sticky;
+            left: 0;
+            background-color: #fff;
+            /* Цвет фона для первых двух столбцов */
+            /* z-index: 2; */
+        }
 
-.fixed-column-2 {
-    position: sticky;
-    left: 100px; /* Измените это значение в зависимости от ширины первого столбца */
-    background-color: #fff; /* Цвет фона для первых двух столбцов */
-    /* z-index: 2; */
-}
+        .fixed-column-2 {
+            position: sticky;
+            left: 100px;
+            /* Измените это значение в зависимости от ширины первого столбца */
+            background-color: #fff;
+            /* Цвет фона для первых двух столбцов */
+            /* z-index: 2; */
+        }
+
         /* tbody td:first-child {
             z-index: 5;
         }
@@ -119,8 +168,10 @@
 </head>
 
 <body>
+
+
     <div class="table-wrapper">
-        <div class="inputContainer">
+        <div class="headerContainer">
             <div class="input-group">
                 <input type="number" id="daysInput" class="form-control" placeholder="Введите количество дней"
                     aria-label="Введите количество дней от 15 до 45" aria-describedby="basic-addon2" min="15" max="45">
@@ -129,7 +180,10 @@
                         (шт)</button>
                 </div>
             </div>
+            <button class="btn btn-outline-secondary deleteModify" type="button">Показать товар без модификации</button>
+            <button class="btn btn-outline-secondary reloadData" type="button">Обновить данные</button>
         </div>
+
         <div class="table-inner container mt-4">
             <table class="table table-bordered" id="data-table">
                 <thead class="thead-dark">
@@ -147,13 +201,15 @@
                         <th>Артикул <i class="bi bi-filter" data-column="vendorCode"></i></th>
                     </tr>
                 </thead>
+
                 <tbody>
                     <!-- Строки  добавлены через renderTable -->
                 </tbody>
             </table>
+            <div id="loading" style="display: none;">Загрузка...</div>
         </div>
-        
-    
+
+
         <div class="modal fade" id="filterModal" tabindex="-1" role="dialog" aria-labelledby="filterModalLabel"
             aria-hidden="true">
             <div class="modal-dialog" role="document">
@@ -182,23 +238,31 @@
             </div>
         </div>
     </div>
-    
+
 
 
 
 
     <script>
         let currentColumn = '';
-        let originalData = [];
+        // let originalData = [];
+        const sessionData = sessionStorage.getItem('data');
 
         function fetchData() {
+            $('#loading').show();
+            $('tbody').hide();
+
             $.getJSON('data.json', function (response) {
                 originalData = response.data;
-                console.log('originalData в fetchData: ', originalData);
-                // sessionStorage.setItem('data', JSON.stringify(originalData));//добавим дату с хранилище
-                renderTable(originalData);
+                // console.log('originalData в fetchData: ', originalData);
+                sessionStorage.setItem('data', JSON.stringify(originalData)); //добавим дату с хранилище
+                $('tbody').show();
+                renderTable(originalData)
+
+                $('#loading').hide();
             }).fail(function () {
                 console.error('Ошибка при загрузке данных');
+                $('#loading').hide();
             });
 
             // $.ajax({
@@ -215,80 +279,81 @@
             // });
         }
 
-//         function renderTable(data) {
-//     const tbody = $('#data-table tbody');
-//     tbody.empty();
+        // функция отрисовки таблицы с одним графиком на товар:
+        //         function renderTable(data) {
+        //     const tbody = $('#data-table tbody');
+        //     tbody.empty();
 
-//     data.forEach(item => {
-//         const photo = item.photos ? `<img src="${item.photos[0].c246x328}" alt="Фото">` : '';
-//         const subject = item.subjectName || '';
-//         const nmID = item.nmID || '';
-//         const vendorCode = item.vendorCode || '';
-//         const graph = item.graph || '';
-//         const rowCount = item.allowed_sizes.length;
+        //     data.forEach(item => {
+        //         const photo = item.photos ? `<img src="${item.photos[0].c246x328}" alt="Фото">` : '';
+        //         const subject = item.subjectName || '';
+        //         const nmID = item.nmID || '';
+        //         const vendorCode = item.vendorCode || '';
+        //         const graph = item.graph || '';
+        //         const rowCount = item.allowed_sizes.length;
 
-//         console.log('graph: ', graph);
-//         console.log('nmID: ', nmID);
+        //         console.log('graph: ', graph);
+        //         console.log('nmID: ', nmID);
 
-//         let firstRow = true;
+        //         let firstRow = true;
 
-//         item.allowed_sizes.forEach(size => {
-//             const orders30 = parseFloat(item['30midle_sales'][size]) || 0;
-//             const orders14 = parseFloat(item['14midle_sales'][size]) || 0;
-//             const leftovers = parseFloat(item['stocks'][size]) || 0;
-//             const leftoversDays = orders30 === 0 ? 0 : (leftovers / orders30).toFixed(2);
+        //         item.allowed_sizes.forEach(size => {
+        //             const orders30 = parseFloat(item['30midle_sales'][size]) || 0;
+        //             const orders14 = parseFloat(item['14midle_sales'][size]) || 0;
+        //             const leftovers = parseFloat(item['stocks'][size]) || 0;
+        //             const leftoversDays = orders30 === 0 ? 0 : (leftovers / orders30).toFixed(2);
 
-//             const graphCell = firstRow ? `
-//                 <td rowspan="${rowCount}">
-//                     <div class="chart-container">
-//                         <canvas id="${nmID}" style="display: block; box-sizing: border-box;"></canvas>
-//                     </div>
-//                 </td>
-//             ` : '';
+        //             const graphCell = firstRow ? `
+        //                 <td rowspan="${rowCount}">
+        //                     <div class="chart-container">
+        //                         <canvas id="${nmID}" style="display: block; box-sizing: border-box;"></canvas>
+        //                     </div>
+        //                 </td>
+        //             ` : '';
 
-//             tbody.append(`
-//                 <tr>
-//                     <td>${photo}</td>
-//                     <td>${subject}</td>
-//                     <td>${nmID}</td>
-//                     <td>${size}</td>
-//                     <td>${orders30}</td>
-//                     <td>${orders14}</td>
-//                     ${graphCell}
-//                     <td>${leftovers}</td>
-//                     <td>${leftoversDays}</td>
-//                     <td> <div class='inscription'>Введите кол-во дней в форму выше и рассчитайте </div></td>
-//                     <td>${vendorCode}</td>
-//                 </tr>
-//             `);
+        //             tbody.append(`
+        //                 <tr>
+        //                     <td>${photo}</td>
+        //                     <td>${subject}</td>
+        //                     <td>${nmID}</td>
+        //                     <td>${size}</td>
+        //                     <td>${orders30}</td>
+        //                     <td>${orders14}</td>
+        //                     ${graphCell}
+        //                     <td>${leftovers}</td>
+        //                     <td>${leftoversDays}</td>
+        //                     <td> <div class='inscription'>Введите кол-во дней в форму выше и рассчитайте </div></td>
+        //                     <td>${vendorCode}</td>
+        //                 </tr>
+        //             `);
 
-//             if (firstRow) {
-//                 initializeChart(nmID, graph);
-//                 firstRow = false;
-//             }
-//         });
-//     });
-// }
+        //             if (firstRow) {
+        //                 initializeChart(nmID, graph);
+        //                 firstRow = false;
+        //             }
+        //         });
+        //     });
+        // }
 
 
-function renderTable(data) {
-    const tbody = $('#data-table tbody');
-    tbody.empty();
+        function renderTable(data) {
+            const tbody = $('#data-table tbody');
+            tbody.empty();
 
-    data.forEach(item => {
-        const photo = item.photos ? `<img src="${item.photos[0].c246x328}" alt="Фото">` : '';
-        const subject = item.subjectName || '';
-        const nmID = item.nmID || '';
-        const vendorCode = item.vendorCode || '';
-        const graph = item.graph || '';
+            data.forEach(item => {
+                const photo = item.photos ? `<img src="${item.photos[0].c246x328}" alt="Фото">` : '';
+                const subject = item.subjectName || '';
+                const nmID = item.nmID || '';
+                const vendorCode = item.vendorCode || '';
+                const graph = item.graph || '';
 
-        item.allowed_sizes.forEach(size => {
-            const orders30 = parseFloat(item['30midle_sales'][size]) || 0;
-            const orders14 = parseFloat(item['14midle_sales'][size]) || 0;
-            const leftovers = parseFloat(item['stocks'][size]) || 0;
-            const leftoversDays = orders30 === 0 ? 0 : (leftovers / orders30).toFixed(2);
+                item.allowed_sizes.forEach(size => {
+                    const orders30 = parseFloat(item['30midle_sales'][size]) || 0;
+                    const orders14 = parseFloat(item['14midle_sales'][size]) || 0;
+                    const leftovers = parseFloat(item['stocks'][size]) || 0;
+                    const leftoversDays = orders30 === 0 ? 0 : (leftovers / orders30).toFixed(2);
 
-            const graphCell = `
+                    const graphCell = `
                 <td>
                     <div class="chart-container">
                         <canvas id="${nmID}-${size}" style="display: block; box-sizing: border-box;"></canvas>
@@ -296,10 +361,10 @@ function renderTable(data) {
                 </td>
             `;
 
-            const leftoversCellClass = getColorClass(leftovers);
-            const leftoversDaysCellClass = getColorClass(leftoversDays);
+                    const leftoversCellClass = getColorClass(leftovers);
+                    const leftoversDaysCellClass = getColorClass(leftoversDays);
 
-            tbody.append(`
+                    tbody.append(`
                 <tr>
                     <td class="fixed-column">${photo}</td>
                     <td class="fixed-column-2">${subject}</td>
@@ -315,42 +380,128 @@ function renderTable(data) {
                 </tr>
             `);
 
-            initializeChart(`${nmID}-${size}`, graph);
-        });
-    });
-}
+                    initializeChart(`${nmID}-${size}`, graph);
+                });
+            });
+        }
+
+        function renderTableWithoutSizes(data) {
+           
+            const tbody = $('#data-table tbody');
+            tbody.empty();
+
+            data.forEach(item => {
+                const photo = item.photos ? `<img src="${item.photos[0].c246x328}" alt="Фото">` : '';
+                const subject = item.subjectName || '';
+                const nmID = item.nmID || '';
+                const vendorCode = item.vendorCode || '';
+                const graph = item.graph || '';
+                const orders30 = item['30midle_sales']
+                const orders14 = item['14midle_sales']
+                const leftovers = item['stocks']
+                // console.log('leftovers: ',leftovers);
+                let totalOrders30 = 0;
+                let totalOrders14 = 0;
+                let totalLeftovers = 0;
+
+
+                // Проверяем, что orders30/orders14/leftovers не пустые и является объектом и собираем данные ключей в них
+                if (orders30 && typeof orders30 === 'object') {
+                    for (const key in orders30) {
+                        if (orders30.hasOwnProperty(key)) {
+                            totalOrders30 += orders30[key];
+                        }
+                    }
+                }
+
+                if (orders14 && typeof orders14 === 'object') {
+                    for (const key in orders14) {
+                        if (orders14.hasOwnProperty(key)) {
+                            totalOrders14 += orders14[key];
+                        }
+                    }
+                }
+                if (leftovers && typeof leftovers === 'object') {
+                    for (const key in leftovers) {
+                        if (leftovers.hasOwnProperty(key)) {
+                            totalLeftovers += leftovers[key];
+                        }
+                    }
+                }
+                const averageOrders30 = Number((totalOrders30).toFixed(2))
+                const averageOrders14 = Number(parseFloat(totalOrders14).toFixed(2))
+                const averageLeftovers = Number(parseFloat(totalLeftovers).toFixed(2))
+                console.log('averageLeftovers: ', averageLeftovers);
+
+                console.log(typeof (averageOrders30), typeof (averageOrders14), typeof (averageLeftovers));
 
 
 
-function renderTableReplenishment(data, valueReplenishment) {
-    const tbody = $('#data-table tbody');
-    tbody.empty();
+                const leftoversDays = averageOrders30 === 0 ? 0 : (averageLeftovers / averageOrders30).toFixed(
+                    2);
 
-    data.forEach(item => {
-        const photo = item.photos ? `<img src="${item.photos[0].c246x328}" alt="Фото">` : '';
-        const subject = item.subjectName || '';
-        const nmID = item.nmID || '';
-        const vendorCode = item.vendorCode || '';
-        const graph = item.graph || '';
+                const graphCell = `
+            <td>
+                <div class="chart-container">
+                    <canvas id="${nmID}" style="display: block; box-sizing: border-box;"></canvas>
+                </div>
+            </td>
+        `;
 
-        item.allowed_sizes.forEach(size => {
-            const orders30 = parseFloat(item['30midle_sales'][size]) || 0;
-            const orders14 = parseFloat(item['14midle_sales'][size]) || 0;
-            const leftovers = parseFloat(item['stocks'][size]) || 0;
-            const leftoversDays = orders30 === 0 ? 0 : (leftovers / orders30).toFixed(2);
-            const replenishment = orders30 === 0 ? 0 : ((orders30 * valueReplenishment) -
+                const leftoversCellClass = getColorClass(leftovers);
+                const leftoversDaysCellClass = getColorClass(leftoversDays);
+
+                tbody.append(`
+            <tr>
+                <td class="fixed-column">${photo}</td>
+                <td class="fixed-column-2">${subject}</td>
+                <td>${nmID}</td>
+                <td>-</td>
+                <td>${averageOrders30}</td>
+                <td>${averageOrders14}</td>
+                ${graphCell}
+                <td class="${leftoversCellClass}">${averageLeftovers}</td>
+                <td class="${leftoversDaysCellClass}">${leftoversDays}</td>
+                <td> <div class='inscription'>Введите кол-во дней в форму выше и рассчитайте </div></td>
+                <td>${vendorCode}</td>
+            </tr>
+        `);
+
+                initializeChart(nmID, graph);
+            });
+            
+            
+        }
+
+        function renderTableReplenishment(data, valueReplenishment) {
+            const tbody = $('#data-table tbody');
+            tbody.empty();
+
+            data.forEach(item => {
+                const photo = item.photos ? `<img src="${item.photos[0].c246x328}" alt="Фото">` : '';
+                const subject = item.subjectName || '';
+                const nmID = item.nmID || '';
+                const vendorCode = item.vendorCode || '';
+                const graph = item.graph || '';
+
+                item.allowed_sizes.forEach(size => {
+                    const orders30 = parseFloat(item['30midle_sales'][size]) || 0;
+                    const orders14 = parseFloat(item['14midle_sales'][size]) || 0;
+                    const leftovers = parseFloat(item['stocks'][size]) || 0;
+                    const leftoversDays = orders30 === 0 ? 0 : (leftovers / orders30).toFixed(2);
+                    const replenishment = orders30 === 0 ? 0 : ((orders30 * valueReplenishment) -
                         leftovers).toFixed(2);
 
-            const graphCell = `
+                    const graphCell = `
                 <td>
                     <div class="chart-container">
                         <canvas id="${nmID}-${size}" style="display: block; box-sizing: border-box;"></canvas>
                     </div>
                 </td>
             `;
-            const leftoversCellClass = getColorClass(leftovers);
-            const leftoversDaysCellClass = getColorClass(leftoversDays);
-            tbody.append(`
+                    const leftoversCellClass = getColorClass(leftovers);
+                    const leftoversDaysCellClass = getColorClass(leftoversDays);
+                    tbody.append(`
                 <tr>
                     <td>${photo}</td>
                     <td>${subject}</td>
@@ -366,26 +517,26 @@ function renderTableReplenishment(data, valueReplenishment) {
                 </tr>
             `);
 
-            initializeChart(`${nmID}-${size}`, graph);
-        });
-    });
-}
+                    initializeChart(`${nmID}-${size}`, graph);
+                });
+            });
+        }
 
-function getColorClass(value) {
-    if (value >= 0 && value <=  1.99) {
-        return 'red-cell';
-    } else if (value >= 2 && value <= 5.99) {
-        return 'yellow-cell';
-    } else if (value >= 6 && value <= 10.99) {
-        return 'light-yellow-cell';
-    } else if (value >= 11) {
-        return 'green-cell';
-    } else {
-        return '';
-    }
-}
+        function getColorClass(value) {
+            if (value >= 0 && value <= 1.99) {
+                return 'red-cell';
+            } else if (value >= 2 && value <= 5.99) {
+                return 'yellow-cell';
+            } else if (value >= 6 && value <= 10.99) {
+                return 'light-yellow-cell';
+            } else if (value >= 11) {
+                return 'green-cell';
+            } else {
+                return '';
+            }
+        }
 
-        
+
         function sortData(column, order) {
             const table = $('#data-table tbody');
             const rows = table.find('tr').get(); //получили все строки в массив
@@ -469,7 +620,7 @@ function getColorClass(value) {
             const parseDate = (dateString) => {
                 const [day, month, year] = dateString.split('.').map(num => parseInt(num, 10));
                 return new Date(
-                `20${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`);
+                    `20${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`);
             };
 
             // Функция для получения индекса дня недели
@@ -548,6 +699,33 @@ function getColorClass(value) {
         }
 
 
+
+        $(document).on('click', '.reloadData', function () {
+            sessionStorage.clear();
+            fetchData();
+        });
+
+        $(document).on('click', '.deleteModify', function () {
+    if ($(this).text() === "Показать товар без модификации") {
+        // Изменяем текст кнопки на "Показать модификации"
+        $(this).text("Показать модификации");
+
+        // Выполняем функцию renderTableWithoutSizes
+        
+        renderTableWithoutSizes(JSON.parse(sessionData));
+       
+    } else if ($(this).text() === "Показать модификации") {
+        // Изменяем текст кнопки на "Показать товар без модификации"
+        $(this).text("Показать товар без модификации");
+
+        // Выполняем функцию renderTable
+       
+        renderTable(JSON.parse(sessionData));
+        
+    }
+});
+
+
         $(document).on('click', '.filter-item', function () {
             const filterValue = $(this).text().trim();
             $('#data-table tbody tr').each(function () {
@@ -563,19 +741,19 @@ function getColorClass(value) {
         });
 
         $(document).ready(function () {
-            const sessionData = sessionStorage.getItem('data');
-            // if (sessionData) {
-            //     originalData = JSON.parse(sessionData);
-            //     renderTable(originalData);
-            // } else {
-            //     fetchData();
-            // }
-            fetchData()
+
+            if (sessionData) {
+                originalData = JSON.parse(sessionData);
+                renderTable(originalData);
+            } else {
+                fetchData();
+            }
+            // fetchData()
             // $('.bi-filter').on('click', function () {
             //     currentColumn = $(this).data('column');
             //     $('#filterModal').modal('show');
             // });
-            
+
 
 
 
@@ -587,7 +765,7 @@ function getColorClass(value) {
                 $('#filterValuesList').empty();
                 uniqueValues.forEach(value => {
                     $('#filterValuesList').append(
-                        `<button class="btn btn-outline-primary filter-item">${value}</button>`
+                        `<div class="filter-item">${value}</div>`
                     );
                 });
 
@@ -628,13 +806,13 @@ function getColorClass(value) {
                 } else {
                     // console.log('Количество дней:', valueReplenishment);
                     renderTableReplenishment(originalData, valueReplenishment);
+                    $('#daysInput').val('');
                 }
 
 
 
             });
         });
-    
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
