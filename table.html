@@ -15,7 +15,7 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <style>
         img{
-            height: 100%;
+            height: 120px;
             padding: 2%;
         }
         .red-text {
@@ -73,14 +73,14 @@
     <script>
      // Определение столбцов и параметров сетки
 const columnDefs = [
-    { headerName: '№', valueGetter: 'node.rowIndex + 1', width: 50, sortable: false, filter: false },
+    { headerName: '№', valueGetter: 'node.rowIndex + 1', width: 70, sortable: false, filter: false },
     { headerName: 'Фото', field: 'photo', cellRenderer: params => `<img src="${params.value}">` },
     { headerName: 'Предмет', field: 'subjectName' },
     { headerName: 'Номенклатура', field: 'nmID' },
     { headerName: 'Размер', field: 'size' },
     { headerName: 'Заказы 1м', field: 'orders1m' },
     { headerName: 'Заказы 14 д', field: 'orders14d' },
-    { headerName: 'График продаж', field: 'salesGraph' },
+    { headerName: 'График продаж за месяц', field: 'salesGraph',  width: 250, cellRenderer: params => createSalesGraph(params.data.salesGraph) },
     {
         headerName: 'Остаток (шт)',
         field: 'stock',
@@ -147,6 +147,7 @@ const localeText = {
 };
 
 const gridOptions = {
+    enableCellTextSelection: true,
     columnDefs: columnDefs,
     defaultColDef: {
         sortable: true,
@@ -155,7 +156,8 @@ const gridOptions = {
     },
     rowData: [],
     localeText: localeText,
-    rowHeight: 90 
+    rowHeight: 120,
+  
 };
 
 // Функция для преобразования данных
@@ -175,7 +177,7 @@ function transformData(data) {
                 size: size,
                 orders1m: orders1m,
                 orders14d: item["14midle_sales"] ? item["14midle_sales"][size] || 0 : 0,
-                salesGraph: '',
+                salesGraph: item["30stat"], // Данные для графика,
                 stock: stock,
                 stockDays: stockDays,
                 replenish: '',
@@ -186,7 +188,36 @@ function transformData(data) {
     return transformedData;
 }
 
+// Функция для преобразования данных без размеров
+function transformDataWithoutSizes(data) {
+    let transformedData = [];
+    data.forEach(item => {
+        let totalStock = 0;
+        let totalOrders1m = 0;
+        let totalOrders14d = 0;
 
+        item.allowed_sizes.forEach(size => {
+            totalStock += item.stocks ? item.stocks[size] || 0 : 0;
+            totalOrders1m += item["30midle_sales"] ? item["30midle_sales"][size] || 0 : 0;
+            totalOrders14d += item["14midle_sales"] ? item["14midle_sales"][size] || 0 : 0;
+        });
+
+        transformedData.push({
+            photo: item.photos ? item.photos[0].c246x328 : '', // Убедитесь, что добавили поле photos в данные
+            subjectName: item.subjectName,
+            nmID: item.nmID,
+            size: '-', // Прочерк для размера
+            orders1m: totalOrders1m,
+            orders14d: totalOrders14d,
+            salesGraph: item["30stat"], // Данные для графика
+            stock: totalStock,
+            stockDays: '', // Оставляем пустым или рассчитаем по новой логике
+            replenish: '',
+            vendorCode: item.vendorCode
+        });
+    });
+    return transformedData;
+}
 
 // Функция для получения данных
 function fetchData() {
@@ -200,6 +231,89 @@ function fetchData() {
     });
 }
 
+
+// График на 30 дней
+function createSalesGraph(statData) {
+    const canvasId = `chart-${Math.random().toString(36).substr(2, 9)}`;
+    setTimeout(() => {
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: Object.keys(statData),
+                datasets: [{
+                    label: 'Продажи',
+                    data: Object.values(statData),
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1,
+                    pointRadius: 0,
+                    borderWidth: 1, // Устанавливаем толщину линии
+                    pointHoverRadius: 5, // Радиус точки при наведении
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        display: true, // Отображение оси X
+                        ticks: {
+                            display: false // Скрываем метки по оси X
+                        }
+                    },
+                    y: {
+                        display: true, // Отображение оси Y
+                        ticks: {
+                            display: false // Скрываем метки по оси Y
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false // Убираем легенду
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                return `Дата: ${context.label}, Количество: ${context.parsed.y}`;
+                            }
+                        }
+                    },
+                    hover: {
+                        mode: 'index',
+                        intersect: false,
+                    }
+                },
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                elements: {
+                    point: {
+                        radius: 0, // Скрываем точки
+                        hoverRadius: 5, // Радиус точки при наведении
+                        hitRadius: 10, // Радиус области взаимодействия точки
+                    }
+                }
+            }
+        });
+    }, 100);
+    return `<canvas id="${canvasId}" style="width: 100%; height: 100px;"></canvas>`;
+}
+
+
+// Обработчик кнопки "Показать товар без модификаций"
+document.querySelector('.deleteModify').addEventListener('click', function () {
+    $.getJSON('data.json', function (response) {
+        const originalData = response.data;
+        const rowDataWithoutSizes = transformDataWithoutSizes(originalData);
+        gridOptions.api.setRowData(rowDataWithoutSizes);
+    }).fail(function () {
+        console.error('Ошибка при загрузке данных');
+    });
+});
+
 document.addEventListener('DOMContentLoaded', function () {
     const gridDiv = document.querySelector('#myGrid');
     new agGrid.Grid(gridDiv, gridOptions);
@@ -210,6 +324,40 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('#resetFilters').addEventListener('click', function() {
         gridOptions.api.setFilterModel(null);
     });
+ 
+ 
+    // Обработчик кнопки "Рассчитать пополнение (шт)"
+ document.querySelector('.calculateReplenishment').addEventListener('click', function () {
+    console.log('work');
+        const daysInput = document.querySelector('#daysInput').value;
+        if (isNaN(daysInput) || daysInput < 15 || daysInput > 45) {
+            alert('Введите число в диапазоне от 15 до 45');
+        } 
+        // Проверяем, что daysInput не пустой и является числом
+        if (daysInput && !isNaN(daysInput)) {
+            // Рассчитываем replenish для каждой строки
+            gridOptions.api.forEachNode(rowNode => {
+                const orders1m = rowNode.data.orders1m;
+                const stockDays = rowNode.data.stockDays;
+
+                if (orders1m !== 0 && stockDays !== 0) {
+                    let replenish = ((orders1m * daysInput) - stockDays).toFixed(2);
+
+                    console.log('replenish: ',replenish);
+                    
+                    // if(replenish < 1){
+                    //     replenish=Number(1)
+                    // }
+                   
+                    // Обновляем данные в текущей строке
+                    rowNode.setDataValue('replenish', replenish);
+                }
+            });
+        } else {
+            console.error('Введите корректное значение для количества дней');
+        }
+    });
+    
 });
 
 
