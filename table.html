@@ -81,6 +81,7 @@ const columnDefs = [
     { headerName: 'Заказы 1м', field: 'orders1m' },
     { headerName: 'Заказы 14 д', field: 'orders14d' },
     { headerName: 'График продаж за месяц', field: 'salesGraph', width: 250, cellRenderer: params => createSalesGraph(params.data.salesGraph) },
+    { headerName: 'Сравнение продаж (нед)', field: 'compareGraph', width: 250, cellRenderer: params => createCompareGraph(params.data.graph) },
     {
         headerName: 'Остаток (шт)',
         field: 'stock',
@@ -177,7 +178,8 @@ function transformData(data) {
 
             // Создаем уникальный идентификатор на основе генератора
             let uniqueId = `${item.nmID}-${size}`;
-            console.log('Transformed uniqueId:', uniqueId);
+            // console.log('Transformed uniqueId:', uniqueId);
+            console.log('item.graph :', item.graph );
             transformedData.push({
                 uniqueId: uniqueId, // Добавляем уникальный идентификатор
                 photo: item.photos ? item.photos[0]["c516x688"] : '',
@@ -187,6 +189,7 @@ function transformData(data) {
                 orders1m: orders1m,
                 orders14d: item["14midle_sales"] ? item["14midle_sales"][size] || 0 : 0,
                 salesGraph: item["30stat"], // Данные для графика,
+                graph: item.graph ,// Данные для сравнения графиков продаж
                 stock: stock,
                 stockDays: stockDays,
                 replenish: '',
@@ -204,6 +207,7 @@ function transformDataWithoutSizes(data) {
         let totalStock = 0;
         let totalOrders1m = 0;
         let totalOrders14d = 0;
+        console.log('item.graph ',item.graph);
 
         item.allowed_sizes.forEach(size => {
             totalStock += item.stocks ? item.stocks[size] || 0 : 0;
@@ -222,8 +226,9 @@ function transformDataWithoutSizes(data) {
             orders1m: totalOrders1m,
             orders14d: totalOrders14d,
             salesGraph: item["30stat"],
+            compareGraph: item.graph, 
             stock: totalStock,
-            stockDays: '', // Можно добавить логику для расчета
+            stockDays: '', //  добавить логику для расчета
             replenish: '',
             vendorCode: item.vendorCode
         });
@@ -312,10 +317,105 @@ function createSalesGraph(statData) {
     return `<canvas id="${canvasId}" style="width: 100%; height: 100px;"></canvas>`;
 }
 
+function createCompareGraph(graphData) {
+    const canvasId = `compare-chart-${Math.random().toString(36).substr(2, 9)}`;
+    const daysOfWeek = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"]; // индексы этих дней: 0,1,2,3,4,5,6
+    const currentDate = new Date();
+    const currentDayIndex = currentDate.getDay(); // нашли индекс текущего дня
+
+    // меняем массив дней недели так, чтобы справа был текущий день недели
+    const labels = [...daysOfWeek.slice(currentDayIndex + 1), ...daysOfWeek.slice(0, currentDayIndex + 1)];
+
+    const currentWeekData = new Array(7).fill(0); // Продажи текущей недели
+    const previousWeekData = new Array(7).fill(0); // Продажи предыдущей 
+
+    // меняем строку даты в объект Date
+    const parseDate = (dateString) => {
+        const [day, month, year] = dateString.split('.').map(num => parseInt(num, 10));
+        return new Date(`20${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`);
+    };
+
+    // Функция для получения индекса дня недели
+    const getWeekdayIndex = (date) => {
+        return date.getDay();
+    };
+
+    // Заполняем данные продаж для текущей и предыдущей недели
+    for (const [dateString, count] of Object.entries(graphData)) {
+        const date = parseDate(dateString);
+        const dayDiff = Math.floor((currentDate - date) / (1000 * 60 * 60 * 24));
+        if (dayDiff >= 0 && dayDiff < 7) {
+            currentWeekData[(7 + getWeekdayIndex(date) - currentDayIndex - 1) % 7] = count;
+        } else if (dayDiff >= 7 && dayDiff < 14) {
+            previousWeekData[(7 + getWeekdayIndex(date) - currentDayIndex - 1) % 7] = count;
+        }
+    }
+
+    setTimeout(() => {
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Продажи предыдущей недели', // убрал это обозначение
+                    data: previousWeekData,
+                    backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }, {
+                    label: 'Продажи текущей недели', // убрал это обозначение
+                    data: currentWeekData,
+                    backgroundColor: 'rgba(153, 102, 255, 0.6)',
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        display: false // Скрыть ось Y
+                    },
+                    x: {
+                        display: true,
+                        ticks: {
+                            color: 'grey' // Цвет текста на оси X
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false // Скрыть легенду
+                    },
+                    tooltip: {
+                        enabled: true,
+                        callbacks: {
+                            label: function (tooltipItem) {
+                                let label = tooltipItem.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += tooltipItem.raw.toFixed(2);
+                                return label;
+                            }
+                        }
+                    }
+                },
+                maintainAspectRatio: false,
+                responsive: true
+            }
+        });
+    }, 100);
+
+    return `<canvas id="${canvasId}" style="width: 100%; height: 100px;"></canvas>`;
+}
+     
 
 // Обработчик кнопки "Показать товар без модификаций" НЕ РАБОТАЕТ ХЗ ПОЧЕМУ
 document.querySelector('.deleteModify').addEventListener('click', function () {
-    $.getJSON('data.json', function (response) {
+    if ($(this).text() === "Показать товар без модификаций") {   
+        $(this).text("Показать модификации");   
+        $.getJSON('data.json', function (response) {
         const originalData = response.data;
         const rowDataWithoutSizes = transformDataWithoutSizes(originalData);
 
@@ -333,6 +433,24 @@ document.querySelector('.deleteModify').addEventListener('click', function () {
     }).fail(function () {
         console.error('Ошибка при загрузке данных');
     });
+       
+    } else if ($(this).text() === "Показать модификации") {
+         $(this).text("Показать товар без модификации");      
+        //  // Загружаем и отображаем модификации
+        //  $.getJSON('data.json', function (response) {
+        //     const originalData = response.data;
+        //     const modifiedData = transformData(originalData);
+
+        //     gridOptions.api.applyTransaction({
+        //         remove: [], // При смене данных не удаляем текущие, только добавляем новые
+        //         add: modifiedData
+        //     });
+        // }).fail(function () {
+        //     console.error('Ошибка при загрузке данных');
+        // });
+        location.reload()
+    }
+    
 });
 
 
