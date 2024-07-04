@@ -80,7 +80,7 @@ const columnDefs = [
     { headerName: 'Размер', field: 'size' },
     { headerName: 'Заказы 1м', field: 'orders1m' },
     { headerName: 'Заказы 14 д', field: 'orders14d' },
-    { headerName: 'График продаж за месяц', field: 'salesGraph',  width: 250, cellRenderer: params => createSalesGraph(params.data.salesGraph) },
+    { headerName: 'График продаж за месяц', field: 'salesGraph', width: 250, cellRenderer: params => createSalesGraph(params.data.salesGraph) },
     {
         headerName: 'Остаток (шт)',
         field: 'stock',
@@ -146,6 +146,8 @@ const localeText = {
     orCondition: 'Или'
 };
 
+
+
 const gridOptions = {
     enableCellTextSelection: true,
     columnDefs: columnDefs,
@@ -157,8 +159,12 @@ const gridOptions = {
     rowData: [],
     localeText: localeText,
     rowHeight: 120,
-  
+    getRowId: data => data.uniqueId
+
 };
+
+let nextUniqueId = 1; // Начальное значение уникального идентификатора
+
 
 // Функция для преобразования данных
 function transformData(data) {
@@ -168,9 +174,12 @@ function transformData(data) {
             let stock = item.stocks ? item.stocks[size] || 0 : 0;
             let orders1m = item["30midle_sales"] ? item["30midle_sales"][size] || 0 : 0;
             let stockDays = orders1m !== 0 ? parseFloat((stock / orders1m).toFixed(2)) : 0;
-            console.log(typeof(stockDays));
 
+            // Создаем уникальный идентификатор на основе генератора
+            let uniqueId = `${item.nmID}-${size}`;
+            console.log('Transformed uniqueId:', uniqueId);
             transformedData.push({
+                uniqueId: uniqueId, // Добавляем уникальный идентификатор
                 photo: item.photos ? item.photos[0]["c516x688"] : '',
                 subjectName: item.subjectName,
                 nmID: item.nmID,
@@ -202,16 +211,19 @@ function transformDataWithoutSizes(data) {
             totalOrders14d += item["14midle_sales"] ? item["14midle_sales"][size] || 0 : 0;
         });
 
+        let uniqueId = item.nmID;
+
         transformedData.push({
-            photo: item.photos ? item.photos[0].c246x328 : '', // Убедитесь, что добавили поле photos в данные
+            uniqueId: uniqueId, // Добавляем уникальный идентификатор
+            photo: item.photos ? item.photos[0].c246x328 : '',
             subjectName: item.subjectName,
             nmID: item.nmID,
             size: '-', // Прочерк для размера
             orders1m: totalOrders1m,
             orders14d: totalOrders14d,
-            salesGraph: item["30stat"], // Данные для графика
+            salesGraph: item["30stat"],
             stock: totalStock,
-            stockDays: '', // Оставляем пустым или рассчитаем по новой логике
+            stockDays: '', // Можно добавить логику для расчета
             replenish: '',
             vendorCode: item.vendorCode
         });
@@ -219,18 +231,16 @@ function transformDataWithoutSizes(data) {
     return transformedData;
 }
 
-// Функция для получения данных
+// Функция для загрузки данных и отображения таблицы
 function fetchData() {
     $.getJSON('data.json', function (response) {
         const originalData = response.data;
         const rowData = transformData(originalData);
-        console.log(rowData);
         gridOptions.api.applyTransaction({ add: rowData });
     }).fail(function () {
         console.error('Ошибка при загрузке данных');
     });
 }
-
 
 // График на 30 дней
 function createSalesGraph(statData) {
@@ -303,31 +313,38 @@ function createSalesGraph(statData) {
 }
 
 
-// Обработчик кнопки "Показать товар без модификаций"
+// Обработчик кнопки "Показать товар без модификаций" НЕ РАБОТАЕТ ХЗ ПОЧЕМУ
 document.querySelector('.deleteModify').addEventListener('click', function () {
     $.getJSON('data.json', function (response) {
         const originalData = response.data;
         const rowDataWithoutSizes = transformDataWithoutSizes(originalData);
-        gridOptions.api.setRowData(rowDataWithoutSizes);
+
+        // Применяем транзакцию для удаления текущих данных и добавления новых данных без размеров
+        const nodesToRemove = [];
+        console.log('nodesToRemove: ',nodesToRemove);
+        gridOptions.api.forEachNode(node => {
+            nodesToRemove.push(node);
+        });
+
+        gridOptions.api.applyTransaction({
+            remove: nodesToRemove,
+            add: rowDataWithoutSizes
+        });
     }).fail(function () {
         console.error('Ошибка при загрузке данных');
     });
 });
 
-document.addEventListener('DOMContentLoaded', function () {
-    const gridDiv = document.querySelector('#myGrid');
-    new agGrid.Grid(gridDiv, gridOptions);
 
-    fetchData();
 
-    // Добавление события для кнопки сброса всех фильтров
-    document.querySelector('#resetFilters').addEventListener('click', function() {
+// Добавление события для кнопки сброса всех фильтров
+document.querySelector('#resetFilters').addEventListener('click', function() {
         gridOptions.api.setFilterModel(null);
     });
  
  
-    // Обработчик кнопки "Рассчитать пополнение (шт)"
- document.querySelector('.calculateReplenishment').addEventListener('click', function () {
+// Обработчик кнопки "Рассчитать пополнение (шт)"
+document.querySelector('.calculateReplenishment').addEventListener('click', function () {
     console.log('work');
         const daysInput = document.querySelector('#daysInput').value;
         if (isNaN(daysInput) || daysInput < 15 || daysInput > 45) {
@@ -357,6 +374,14 @@ document.addEventListener('DOMContentLoaded', function () {
             console.error('Введите корректное значение для количества дней');
         }
     });
+    
+document.addEventListener('DOMContentLoaded', function () {
+    const gridDiv = document.querySelector('#myGrid');
+    new agGrid.Grid(gridDiv, gridOptions);
+
+    fetchData();
+
+    
     
 });
 
