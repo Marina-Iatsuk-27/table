@@ -174,33 +174,6 @@ const columnDefs = [
     { headerName: 'Артикул', field: 'vendorCode', width: 150, }
 ];
 
-//переключаем графики
-function createToggleableGraph(params) {
-    const container = document.createElement('div');
-    let currentGraph = 'compareGraph'; 
-
-    function toggleGraph() {
-        currentGraph = currentGraph === 'compareGraph' ? 'salesGraph' : 'compareGraph';
-        const graphData = currentGraph === 'compareGraph' ? params.data.graph : params.data.salesGraph;
-        container.innerHTML = createGraphComponent(graphData);
-    }
-
-    function createGraphComponent(graphData) {
-        if (currentGraph === 'compareGraph') {
-            return createCompareGraph(graphData);
-        } else {
-            return createSalesGraph(graphData);
-        }
-    }
-
-    container.innerHTML = createGraphComponent(params.data.graph);
-    container.addEventListener('click', toggleGraph);
-
-    return container;
-}
-
-
- 
 
 const localeText = {
     // Русификация фильтров
@@ -245,18 +218,19 @@ const gridOptions = {
     }
 };
 
-// Функция для загрузки данных и отображения таблицы
+// !!! УБРАТЬ при подключении АПИ Функция для загрузки данных и отображения таблицы 
 function fetchData() {
     $.getJSON('data.json', function (response) {
         const originalData = response.data;
         const rowData = transformData(originalData);
-        console.log('rowData ',rowData);
+        // console.log('rowData ',rowData);
         gridOptions.api.applyTransaction({ add: rowData });
     }).fail(function () {
         console.error('Ошибка при загрузке данных');
     });
 }
 
+// !!! РАССКОММЕНТИРОВАТЬ при загрузке данных с сервере
 // function fetchData() {
 //     $.ajax({
 //         url: '/api/get_stat_table',
@@ -348,6 +322,30 @@ let orders14d  = parseFloat(totalOrders14d.toFixed(2))
     return transformedData;
 }
 
+//переключаем графики
+function createToggleableGraph(params) {
+    const container = document.createElement('div');
+    let currentGraph = 'compareGraph'; 
+
+    function toggleGraph() {
+        currentGraph = currentGraph === 'compareGraph' ? 'salesGraph' : 'compareGraph';
+        const graphData = currentGraph === 'compareGraph' ? params.data.graph : params.data.salesGraph;
+        container.innerHTML = createGraphComponent(graphData);
+    }
+
+    function createGraphComponent(graphData) {
+        if (currentGraph === 'compareGraph') {
+            return createCompareGraph(graphData);
+        } else {
+            return createSalesGraph(graphData);
+        }
+    }
+
+    container.innerHTML = createGraphComponent(params.data.graph);
+    container.addEventListener('click', toggleGraph);
+
+    return container;
+}
 
 // График на 30 дней
 function createSalesGraph(statData) {
@@ -421,39 +419,39 @@ function createSalesGraph(statData) {
 
 function createCompareGraph(graphData) {
 
-    console.log('graphData: ', graphData);
+     console.log('graphData: ', graphData);
     const canvasId = `compare-chart-${Math.random().toString(36).substr(2, 9)}`;
     const daysOfWeek = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"]; // индексы этих дней: 0,1,2,3,4,5,6
-    const currentDate = new Date();
-    const currentDayIndex = currentDate.getDay(); // нашли индекс текущего дня
+        const currentDate = new Date();
+        const currentDayIndex = currentDate.getDay(); // нашли индекс текущего дня
 
-    // меняем массив дней недели так, чтобы справа был текущий день недели
-    const labels = [...daysOfWeek.slice(currentDayIndex + 1), ...daysOfWeek.slice(0, currentDayIndex + 1)];
+        // меняем массив дней недели так, чтобы справа был текущий день недели
+        const labels = [...daysOfWeek.slice(currentDayIndex + 1), ...daysOfWeek.slice(0, currentDayIndex + 1)];
 
-    const currentWeekData = new Array(7).fill(0); // Продажи текущей недели
-    const previousWeekData = new Array(7).fill(0); // Продажи предыдущей 
+        const currentWeekData = new Array(7).fill(0); // Продажи текущей недели
+        const previousWeekData = new Array(7).fill(0); // Продажи предыдущей 
 
-    // меняем строку даты в объект Date
-    const parseDate = (dateString) => {
-        const [day, month, year] = dateString.split('.').map(num => parseInt(num, 10));
-        return new Date(`20${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`);
-    };
+        // меняем строку даты в объект Date
+        const parseDate = (dateString) => {
+            const [day, month, year] = dateString.split('.').map(num => parseInt(num, 10));
+            return new Date(`20${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`);
+        };
 
-    // Функция для получения индекса дня недели
-    const getWeekdayIndex = (date) => {
-        return date.getDay();
-    };
+        // Функция для получения индекса дня недели
+        const getWeekdayIndex = (date) => {
+            return date.getDay();
+        };
 
-    // Заполняем данные продаж для текущей и предыдущей недели
-    for (const [dateString, count] of Object.entries(graphData)) {
-        const date = parseDate(dateString);
-        const dayDiff = Math.floor((currentDate - date) / (1000 * 60 * 60 * 24));
-        if (dayDiff >= 0 && dayDiff < 7) {
-            currentWeekData[(7 + getWeekdayIndex(date) - currentDayIndex - 1) % 7] = count;
-        } else if (dayDiff >= 7 && dayDiff < 14) {
-            previousWeekData[(7 + getWeekdayIndex(date) - currentDayIndex - 1) % 7] = count;
+        // Заполняем данные продаж для текущей и предыдущей недели
+        for (const [dateString, count] of Object.entries(graphData)) {
+            const date = parseDate(dateString);
+            const dayDiff = Math.floor((currentDate - date) / (1000 * 60 * 60 * 24));
+            if (dayDiff >= 0 && dayDiff < 7) {
+                currentWeekData[(7 + getWeekdayIndex(date) - currentDayIndex - 1) % 7] = count;
+            } else if (dayDiff >= 7 && dayDiff < 14) {
+                previousWeekData[(7 + getWeekdayIndex(date) - currentDayIndex - 1) % 7] = count;
+            }
         }
-    }
 
     setTimeout(() => {
         const ctx = document.getElementById(canvasId).getContext('2d');
@@ -523,9 +521,9 @@ document.querySelector('.deleteModify').addEventListener('click', function () {
             const originalData = response.data;
             const rowDataWithoutSizes = transformDataWithoutSizes(originalData);
 
-            console.log('originalData:', originalData);
+            // console.log('originalData:', originalData);
 
-            console.log('rowDataWithoutSizes:', rowDataWithoutSizes);
+            // console.log('rowDataWithoutSizes:', rowDataWithoutSizes);
 
 
             // Применяем транзакцию для удаления текущих данных и добавления новых данных без размеров
@@ -565,7 +563,9 @@ document.querySelector('.deleteModify').addEventListener('click', function () {
 
 // Добавление события для кнопки сброса всех фильтров
 document.querySelector('#resetFilters').addEventListener('click', function() {
+    // console.log('work');
         gridOptions.api.setFilterModel(null);
+        
     });
  
  
