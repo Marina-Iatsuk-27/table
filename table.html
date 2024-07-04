@@ -169,7 +169,7 @@ function transformData(data) {
             console.log(typeof(stockDays));
 
             transformedData.push({
-                photo: item.photos ? item.photos[0] || '' : '',
+                photo: item.photos ? item.photos[0]["c516x688"] : '',
                 subjectName: item.subjectName,
                 nmID: item.nmID,
                 size: size,
@@ -185,6 +185,7 @@ function transformData(data) {
     });
     return transformedData;
 }
+
 
 
 // Функция для получения данных
