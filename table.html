@@ -80,8 +80,14 @@ const columnDefs = [
     { headerName: 'Размер', field: 'size' },
     { headerName: 'Заказы 1м', field: 'orders1m' },
     { headerName: 'Заказы 14 д', field: 'orders14d' },
-    { headerName: 'График продаж за месяц', field: 'salesGraph', width: 250, cellRenderer: params => createSalesGraph(params.data.salesGraph) },
-    { headerName: 'Сравнение продаж (нед)', field: 'compareGraph', width: 250, cellRenderer: params => createCompareGraph(params.data.graph) },
+    // { headerName: 'График продаж за месяц', field: 'salesGraph', width: 250, cellRenderer: params => createSalesGraph(params.data.salesGraph) },
+    // { headerName: 'Сравнение продаж (нед)', field: 'compareGraph', width: 250, cellRenderer: params => createCompareGraph(params.data.graph) },
+    {
+        headerName: 'Графики',
+        field: 'graph',
+        width: 300,
+        cellRenderer: params => createToggleableGraph(params)
+    },
     {
         headerName: 'Остаток (шт)',
         field: 'stock',
@@ -123,6 +129,35 @@ const columnDefs = [
     { headerName: 'Пополнить (шт)', field: 'replenish' },
     { headerName: 'Артикул', field: 'vendorCode' }
 ];
+//переключаем графики
+function createToggleableGraph(params) {
+    const container = document.createElement('div');
+    let currentGraph = 'compareGraph'; 
+
+    function toggleGraph() {
+        currentGraph = currentGraph === 'compareGraph' ? 'salesGraph' : 'compareGraph';
+        const graphData = currentGraph === 'compareGraph' ? params.data.graph : params.data.salesGraph;
+        container.innerHTML = createGraphComponent(graphData);
+    }
+
+    function createGraphComponent(graphData) {
+        if (currentGraph === 'compareGraph') {
+            return createCompareGraph(graphData);
+        } else {
+            return createSalesGraph(graphData);
+        }
+    }
+
+    container.innerHTML = createGraphComponent(params.data.graph);
+    container.addEventListener('click', toggleGraph);
+
+    return container;
+}
+
+
+
+
+ 
 
 const localeText = {
     // Русификация фильтров
