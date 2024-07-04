@@ -244,6 +244,33 @@ const gridOptions = {
     }
 };
 
+// Функция для загрузки данных и отображения таблицы
+function fetchData() {
+    $.getJSON('data.json', function (response) {
+        const originalData = response.data;
+        const rowData = transformData(originalData);
+        gridOptions.api.applyTransaction({ add: rowData });
+    }).fail(function () {
+        console.error('Ошибка при загрузке данных');
+    });
+}
+
+// function fetchData() {
+//     $.ajax({
+//         url: '/api/get_stat_table',
+//         method: 'GET',
+//         dataType: 'json',
+//         success: function (response) {
+//             const originalData = response.data;
+//             const rowData = transformData(originalData);
+//             gridOptions.api.applyTransaction({ add: rowData });
+//         },
+//         error: function () {
+//             console.error('Ошибка при загрузке данных');
+//         }
+//     });
+// }
+
 
 // Функция для преобразования данных
 function transformData(data) {
@@ -319,16 +346,6 @@ let orders14d  = parseFloat(totalOrders14d.toFixed(2))
     return transformedData;
 }
 
-// Функция для загрузки данных и отображения таблицы
-function fetchData() {
-    $.getJSON('data.json', function (response) {
-        const originalData = response.data;
-        const rowData = transformData(originalData);
-        gridOptions.api.applyTransaction({ add: rowData });
-    }).fail(function () {
-        console.error('Ошибка при загрузке данных');
-    });
-}
 
 // График на 30 дней
 function createSalesGraph(statData) {
@@ -546,35 +563,35 @@ document.querySelector('#resetFilters').addEventListener('click', function() {
  
 // Обработчик кнопки "Рассчитать пополнение (шт)"
 document.querySelector('.calculateReplenishment').addEventListener('click', function () {
-    console.log('work');
-        const daysInput = document.querySelector('#daysInput').value;
-        if (isNaN(daysInput) || daysInput < 15 || daysInput > 45) {
-            alert('Введите число в диапазоне от 15 до 45');
-        } 
-        // Проверяем, что daysInput не пустой и является числом
-        if (daysInput && !isNaN(daysInput)) {
-            // Рассчитываем replenish для каждой строки
-            gridOptions.api.forEachNode(rowNode => {
-                const orders1m = rowNode.data.orders1m;
-                const stockDays = rowNode.data.stockDays;
+    const daysInputElement = document.querySelector('#daysInput');
+    const daysInput = daysInputElement.value;
 
-                if (orders1m !== 0 && stockDays !== 0) {
-                    let replenish = ((orders1m * daysInput) - stockDays).toFixed(2);
+    if (isNaN(daysInput) || daysInput < 15 || daysInput > 45) {
+        alert('Введите число в диапазоне от 15 до 45');
+    } 
 
-                    console.log('replenish: ',replenish);
-                    
-                    // if(replenish < 1){
-                    //     replenish=Number(1)
-                    // }
-                   
-                    // Обновляем данные в текущей строке
-                    rowNode.setDataValue('replenish', replenish);
-                }
-            });
-        } else {
-            console.error('Введите корректное значение для количества дней');
-        }
-    });
+    // Проверяем, что daysInput не пустой и является числом
+    if (daysInput && !isNaN(daysInput)) {
+        // Рассчитываем replenish для каждой строки
+        gridOptions.api.forEachNode(rowNode => {
+            const orders1m = rowNode.data.orders1m;
+            const stockDays = rowNode.data.stockDays;
+
+            if (orders1m !== 0 && stockDays !== 0) {
+                let replenish = ((orders1m * daysInput) - stockDays).toFixed(2);
+
+                // Обновляем данные в текущей строке
+                rowNode.setDataValue('replenish', replenish);
+            }
+        });
+
+        // Очищаем значение инпута после выполнения расчетов
+        daysInputElement.value = '';
+    } else {
+        console.error('Введите корректное значение для количества дней');
+    }
+});
+
     
 document.addEventListener('DOMContentLoaded', function () {
     const gridDiv = document.querySelector('#myGrid');
