@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@ag-grid-community/core/dist/ag-grid-community.noStyle.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
-  
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <style>
@@ -45,6 +45,48 @@
     padding: 2px 5px;
     border-radius: 3px;
 }
+.table-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 20px;
+            width: 100vw;
+            align-items: center;
+        }
+        .headerContainer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            width: 80vw;
+        }
+        .input-group,.btn-wrapper{
+            height: 50px;
+        }
+        input, button{
+            height: 100% !important;
+            font-size: small !important;
+        }
+        .input-group{
+            width: 40vw !important;
+        }
+        .table-inner {
+          
+            width: 100%;
+        }
+        #myGrid {
+            /* height: calc(100% - 50px); */
+            width: 100%;
+        }
+        #loading {
+            text-align: center;
+            padding: 20px;
+            font-size: 1.5rem;
+        }
+        #resetFilters {
+            margin-bottom: 10px;
+        }
+
 
     </style>
 </head>
@@ -58,14 +100,14 @@
                     <button class="btn btn-outline-secondary calculateReplenishment" type="button">Рассчитать пополнение (шт)</button>
                 </div>
             </div>
-            <button class="btn btn-outline-secondary deleteModify" type="button">Показать товар без модификаций</button>
-            <button class="btn btn-outline-secondary reloadData" type="button">Обновить данные</button>
+            <div class="btn-wrapper"> <button id="resetFilters" class="btn btn-outline-secondary ">Сбросить все фильтры</button> </div>
+            <div class="btn-wrapper"> <button class="btn btn-outline-secondary deleteModify" type="button">Показать товар без модификаций</button></div>
+            
+           
         </div>
-        <div style="margin-bottom: 10px;">
-            <button id="resetFilters">Сбросить все фильтры</button>
-        </div>
+        
         <div class="table-inner container mt-4">
-            <div id="myGrid" class="ag-theme-alpine" style="height: 600px; width: 100%;"></div>
+            <div id="myGrid" class="ag-theme-alpine" style="height: 600px"></div>
             <div id="loading" style="display: none;">Загрузка...</div>
         </div>
     </div>
@@ -73,13 +115,13 @@
     <script>
      // Определение столбцов и параметров сетки
 const columnDefs = [
-    { headerName: '№', valueGetter: 'node.rowIndex + 1', width: 70, sortable: false, filter: false },
-    { headerName: 'Фото', field: 'photo', cellRenderer: params => `<img src="${params.value}">` },
-    { headerName: 'Предмет', field: 'subjectName' },
-    { headerName: 'Номенклатура', field: 'nmID' },
-    { headerName: 'Размер', field: 'size' },
-    { headerName: 'Заказы 1м', field: 'orders1m' },
-    { headerName: 'Заказы 14 д', field: 'orders14d' },
+    { headerName: '№', valueGetter: 'node.rowIndex + 1', width: 60, sortable: false, filter: false },
+    { headerName: 'Фото', field: 'photo', width: 100, cellRenderer: params => `<img src="${params.value}">` },
+    { headerName: 'Предмет', field: 'subjectName', width: 120 },
+    { headerName: 'Номенклатура', field: 'nmID', width: 160 },
+    { headerName: 'Размер', field: 'size', width: 120 },
+    { headerName: 'Заказы 1м', field: 'orders1m', width: 150 },
+    { headerName: 'Заказы 14 д', field: 'orders14d', width: 150 },
     // { headerName: 'График продаж за месяц', field: 'salesGraph', width: 250, cellRenderer: params => createSalesGraph(params.data.salesGraph) },
     // { headerName: 'Сравнение продаж (нед)', field: 'compareGraph', width: 250, cellRenderer: params => createCompareGraph(params.data.graph) },
     {
@@ -91,6 +133,7 @@ const columnDefs = [
     {
         headerName: 'Остаток (шт)',
         field: 'stock',
+        width: 120,
         cellRenderer: function(params) {
             const value = params.value;
             let className = '';
@@ -110,6 +153,7 @@ const columnDefs = [
     {
         headerName: 'Остаток (дн)',
         field: 'stockDays',
+        width: 120,
         cellRenderer: function(params) {
             const value = params.value;
             let className = '';
@@ -126,8 +170,8 @@ const columnDefs = [
             return `<span class="${className}">${value}</span>`;
         }
     },
-    { headerName: 'Пополнить (шт)', field: 'replenish' },
-    { headerName: 'Артикул', field: 'vendorCode' }
+    { headerName: 'Пополнить (шт)', field: 'replenish',width: 120 },
+    { headerName: 'Артикул', field: 'vendorCode', width: 150, }
 ];
 //переключаем графики
 function createToggleableGraph(params) {
@@ -153,8 +197,6 @@ function createToggleableGraph(params) {
 
     return container;
 }
-
-
 
 
  
@@ -242,7 +284,8 @@ function transformDataWithoutSizes(data) {
         let totalStock = 0;
         let totalOrders1m = 0;
         let totalOrders14d = 0;
-        console.log('item.graph ',item.graph);
+        
+         console.log('item.graph ',item.graph);
 
         item.allowed_sizes.forEach(size => {
             totalStock += item.stocks ? item.stocks[size] || 0 : 0;
@@ -250,6 +293,9 @@ function transformDataWithoutSizes(data) {
             totalOrders14d += item["14midle_sales"] ? item["14midle_sales"][size] || 0 : 0;
         });
 
+        let stockDays = totalOrders1m !== 0 ? parseFloat((totalStock / totalOrders1m).toFixed(2)) : 0;
+let orders1m  = parseFloat(totalOrders1m.toFixed(2))
+let orders14d  = parseFloat(totalOrders14d.toFixed(2))
         let uniqueId = item.nmID;
 
         transformedData.push({
@@ -258,12 +304,12 @@ function transformDataWithoutSizes(data) {
             subjectName: item.subjectName,
             nmID: item.nmID,
             size: '-', // Прочерк для размера
-            orders1m: totalOrders1m,
-            orders14d: totalOrders14d,
+            orders1m: orders1m,
+            orders14d: orders14d,
             salesGraph: item["30stat"],
             compareGraph: item.graph, 
             stock: totalStock,
-            stockDays: '', //  добавить логику для расчета
+            stockDays: stockDays, //  добавить логику для расчета
             replenish: '',
             vendorCode: item.vendorCode
         });
