@@ -237,11 +237,12 @@ const gridOptions = {
     rowData: [],
     localeText: localeText,
     rowHeight: 120,
-    getRowId: data => data.uniqueId
-
+    getRowId: params => {
+        const id = params.data.uniqueId;
+        console.log('Row ID:', id, 'Data:', params);
+        return id;
+    }
 };
-
-let nextUniqueId = 1; // Начальное значение уникального идентификатора
 
 
 // Функция для преобразования данных
@@ -255,8 +256,9 @@ function transformData(data) {
 
             // Создаем уникальный идентификатор на основе генератора
             let uniqueId = `${item.nmID}-${size}`;
+            console.log('uniqueId в начале' , uniqueId);
             // console.log('Transformed uniqueId:', uniqueId);
-            console.log('item.graph :', item.graph );
+            // console.log('item.graph :', item.graph );
             transformedData.push({
                 uniqueId: uniqueId, // Добавляем уникальный идентификатор
                 photo: item.photos ? item.photos[0]["c516x688"] : '',
@@ -297,7 +299,7 @@ function transformDataWithoutSizes(data) {
 let orders1m  = parseFloat(totalOrders1m.toFixed(2))
 let orders14d  = parseFloat(totalOrders14d.toFixed(2))
         let uniqueId = item.nmID;
-
+        console.log('uniqueId во второй' , uniqueId);
         transformedData.push({
             uniqueId: uniqueId, // Добавляем уникальный идентификатор
             photo: item.photos ? item.photos[0].c246x328 : '',
