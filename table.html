@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ag-grid-community/styles/ag-grid.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ag-grid-community/styles/ag-theme-alpine.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@ag-grid-community/core/dist/ag-grid-community.noStyle.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
+  
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <style>
+        img{
+            height: 100%;
+            padding: 2%;
+        }
+        .red-text {
+    background-color: red;
+    color: white; /* белый текст на красном фоне */
+    padding: 2px 5px; /* отступы вокруг текста */
+    border-radius: 3px; /* скругление углов */
+}
+
+.orange-text {
+    background-color: orange;
+    color: black; /* черный текст на оранжевом фоне */
+    padding: 2px 5px;
+    border-radius: 3px;
+}
+
+.yellow-text {
+    background-color: yellow;
+    color: black;
+    padding: 2px 5px;
+    border-radius: 3px;
+}
+
+.green-text {
+    background-color: green;
+    color: white;
+    padding: 2px 5px;
+    border-radius: 3px;
+}
+
+    </style>
+</head>
+<body>
+    <div class="table-wrapper">
+        <div class="headerContainer">
+            <div class="input-group">
+                <input type="number" id="daysInput" class="form-control" placeholder="Введите количество дней"
+                    aria-label="Введите количество дней от 15 до 45" aria-describedby="basic-addon2" min="15" max="45">
+                <div class="input-group-append">
+                    <button class="btn btn-outline-secondary calculateReplenishment" type="button">Рассчитать пополнение (шт)</button>
+                </div>
+            </div>
+            <button class="btn btn-outline-secondary deleteModify" type="button">Показать товар без модификаций</button>
+            <button class="btn btn-outline-secondary reloadData" type="button">Обновить данные</button>
+        </div>
+        <div style="margin-bottom: 10px;">
+            <button id="resetFilters">Сбросить все фильтры</button>
+        </div>
+        <div class="table-inner container mt-4">
+            <div id="myGrid" class="ag-theme-alpine" style="height: 600px; width: 100%;"></div>
+            <div id="loading" style="display: none;">Загрузка...</div>
+        </div>
+    </div>
+
+    <script>
+     // Определение столбцов и параметров сетки
+const columnDefs = [
+    { headerName: '№', valueGetter: 'node.rowIndex + 1', width: 50, sortable: false, filter: false },
+    { headerName: 'Фото', field: 'photo', cellRenderer: params => `<img src="${params.value}">` },
+    { headerName: 'Предмет', field: 'subjectName' },
+    { headerName: 'Номенклатура', field: 'nmID' },
+    { headerName: 'Размер', field: 'size' },
+    { headerName: 'Заказы 1м', field: 'orders1m' },
+    { headerName: 'Заказы 14 д', field: 'orders14d' },
+    { headerName: 'График продаж', field: 'salesGraph' },
+    {
+        headerName: 'Остаток (шт)',
+        field: 'stock',
+        cellRenderer: function(params) {
+            const value = params.value;
+            let className = '';
+            if (value >= 0 && value <= 1.99) {
+                className = 'red-text';
+            } else if (value >= 2 && value <= 5.99) {
+                className = 'orange-text';
+            } else if (value >= 6 && value <= 10.99) {
+                className = 'yellow-text';
+            } else if (value >= 11) {
+                className = 'green-text';
+            }
+
+            return `<span class="${className}">${value}</span>`;
+        }
+    },
+    {
+        headerName: 'Остаток (дн)',
+        field: 'stockDays',
+        cellRenderer: function(params) {
+            const value = params.value;
+            let className = '';
+            if (value >= 0 && value <= 1.99) {
+                className = 'red-text';
+            } else if (value >= 2 && value <= 5.99) {
+                className = 'orange-text';
+            } else if (value >= 6 && value <= 10.99) {
+                className = 'yellow-text';
+            } else if (value >= 11) {
+                className = 'green-text';
+            }
+
+            return `<span class="${className}">${value}</span>`;
+        }
+    },
+    { headerName: 'Пополнить (шт)', field: 'replenish' },
+    { headerName: 'Артикул', field: 'vendorCode' }
+];
+
+const localeText = {
+    // Русификация фильтров
+    page: 'страница',
+    more: 'ещё',
+    to: 'к',
+    of: 'из',
+    next: 'следующий',
+    last: 'последний',
+    first: 'первый',
+    previous: 'предыдущий',
+    loadingOoo: 'Загрузка...',
+    applyFilter: 'Применить фильтр...',
+    equals: 'Равно',
+    notEqual: 'Не равно',
+    filterOoo: 'Фильтр...',
+    contains: 'Содержит',
+    notContains: 'Не содержит',
+    startsWith: 'Начинается с',
+    endsWith: 'Заканчивается на',
+    andCondition: 'И',
+    orCondition: 'Или'
+};
+
+const gridOptions = {
+    columnDefs: columnDefs,
+    defaultColDef: {
+        sortable: true,
+        filter: true,
+        resizable: true
+    },
+    rowData: [],
+    localeText: localeText,
+    rowHeight: 90 
+};
+
+// Функция для преобразования данных
+function transformData(data) {
+    let transformedData = [];
+    data.forEach(item => {
+        item.allowed_sizes.forEach(size => {
+            let stock = item.stocks ? item.stocks[size] || 0 : 0;
+            let orders1m = item["30midle_sales"] ? item["30midle_sales"][size] || 0 : 0;
+            let stockDays = orders1m !== 0 ? parseFloat((stock / orders1m).toFixed(2)) : 0;
+            console.log(typeof(stockDays));
+
+            transformedData.push({
+                photo: item.photos ? item.photos[0] || '' : '',
+                subjectName: item.subjectName,
+                nmID: item.nmID,
+                size: size,
+                orders1m: orders1m,
+                orders14d: item["14midle_sales"] ? item["14midle_sales"][size] || 0 : 0,
+                salesGraph: '',
+                stock: stock,
+                stockDays: stockDays,
+                replenish: '',
+                vendorCode: item.vendorCode
+            });
+        });
+    });
+    return transformedData;
+}
+
+
+// Функция для получения данных
+function fetchData() {
+    $.getJSON('data.json', function (response) {
+        const originalData = response.data;
+        const rowData = transformData(originalData);
+        console.log(rowData);
+        gridOptions.api.applyTransaction({ add: rowData });
+    }).fail(function () {
+        console.error('Ошибка при загрузке данных');
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const gridDiv = document.querySelector('#myGrid');
+    new agGrid.Grid(gridDiv, gridOptions);
+
+    fetchData();
+
+    // Добавление события для кнопки сброса всех фильтров
+    document.querySelector('#resetFilters').addEventListener('click', function() {
+        gridOptions.api.setFilterModel(null);
+    });
+});
+
+
+    </script>
+</body>
+</html>
