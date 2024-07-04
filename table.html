@@ -173,6 +173,7 @@ const columnDefs = [
     { headerName: 'Пополнить (шт)', field: 'replenish',width: 120 },
     { headerName: 'Артикул', field: 'vendorCode', width: 150, }
 ];
+
 //переключаем графики
 function createToggleableGraph(params) {
     const container = document.createElement('div');
@@ -239,7 +240,7 @@ const gridOptions = {
     rowHeight: 120,
     getRowId: params => {
         const id = params.data.uniqueId;
-        console.log('Row ID:', id, 'Data:', params);
+        // console.log('Row ID:', id, 'Data:', params);
         return id;
     }
 };
@@ -249,6 +250,7 @@ function fetchData() {
     $.getJSON('data.json', function (response) {
         const originalData = response.data;
         const rowData = transformData(originalData);
+        console.log('rowData ',rowData);
         gridOptions.api.applyTransaction({ add: rowData });
     }).fail(function () {
         console.error('Ошибка при загрузке данных');
@@ -283,9 +285,9 @@ function transformData(data) {
 
             // Создаем уникальный идентификатор на основе генератора
             let uniqueId = `${item.nmID}-${size}`;
-            console.log('uniqueId в начале' , uniqueId);
+            // console.log('uniqueId в начале' , uniqueId);
             // console.log('Transformed uniqueId:', uniqueId);
-            // console.log('item.graph :', item.graph );
+            //  console.log('item.graph в transformData:', item.graph );
             transformedData.push({
                 uniqueId: uniqueId, // Добавляем уникальный идентификатор
                 photo: item.photos ? item.photos[0]["c516x688"] : '',
@@ -314,7 +316,7 @@ function transformDataWithoutSizes(data) {
         let totalOrders1m = 0;
         let totalOrders14d = 0;
         
-         console.log('item.graph ',item.graph);
+        //  console.log('item.graph в transformDataWithoutSizes',item.graph);
 
         item.allowed_sizes.forEach(size => {
             totalStock += item.stocks ? item.stocks[size] || 0 : 0;
@@ -326,7 +328,7 @@ function transformDataWithoutSizes(data) {
 let orders1m  = parseFloat(totalOrders1m.toFixed(2))
 let orders14d  = parseFloat(totalOrders14d.toFixed(2))
         let uniqueId = item.nmID;
-        console.log('uniqueId во второй' , uniqueId);
+        // console.log('uniqueId во второй' , uniqueId);
         transformedData.push({
             uniqueId: uniqueId, // Добавляем уникальный идентификатор
             photo: item.photos ? item.photos[0].c246x328 : '',
@@ -336,7 +338,7 @@ let orders14d  = parseFloat(totalOrders14d.toFixed(2))
             orders1m: orders1m,
             orders14d: orders14d,
             salesGraph: item["30stat"],
-            compareGraph: item.graph, 
+            graph: item.graph, 
             stock: totalStock,
             stockDays: stockDays, //  добавить логику для расчета
             replenish: '',
@@ -418,6 +420,8 @@ function createSalesGraph(statData) {
 }
 
 function createCompareGraph(graphData) {
+
+    console.log('graphData: ', graphData);
     const canvasId = `compare-chart-${Math.random().toString(36).substr(2, 9)}`;
     const daysOfWeek = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"]; // индексы этих дней: 0,1,2,3,4,5,6
     const currentDate = new Date();
@@ -516,23 +520,27 @@ document.querySelector('.deleteModify').addEventListener('click', function () {
     if ($(this).text() === "Показать товар без модификаций") {   
         $(this).text("Показать модификации");   
         $.getJSON('data.json', function (response) {
-        const originalData = response.data;
-        const rowDataWithoutSizes = transformDataWithoutSizes(originalData);
+            const originalData = response.data;
+            const rowDataWithoutSizes = transformDataWithoutSizes(originalData);
 
-        // Применяем транзакцию для удаления текущих данных и добавления новых данных без размеров
-        const nodesToRemove = [];
-        console.log('nodesToRemove: ',nodesToRemove);
-        gridOptions.api.forEachNode(node => {
-            nodesToRemove.push(node);
-        });
+            console.log('originalData:', originalData);
 
-        gridOptions.api.applyTransaction({
-            remove: nodesToRemove,
-            add: rowDataWithoutSizes
+            console.log('rowDataWithoutSizes:', rowDataWithoutSizes);
+
+
+            // Применяем транзакцию для удаления текущих данных и добавления новых данных без размеров
+            const nodesToRemove = [];
+            gridOptions.api.forEachNode(node => {
+                nodesToRemove.push(node.data);
+            });
+
+            gridOptions.api.applyTransaction({
+                remove: nodesToRemove,
+                add: rowDataWithoutSizes
+            });
+        }).fail(function () {
+            console.error('Ошибка при загрузке данных');
         });
-    }).fail(function () {
-        console.error('Ошибка при загрузке данных');
-    });
        
     } else if ($(this).text() === "Показать модификации") {
          $(this).text("Показать товар без модификации");      
